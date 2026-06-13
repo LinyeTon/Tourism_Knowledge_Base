@@ -92,19 +92,25 @@ def recognize_item_name(context:str, file_title:str):
     # 4. 组装调用链
     chains = chat_model | JsonOutputParser()
     # 5. 执行调用链获取item_name
-    item_name = chains.invoke(messages)
-    logger.info(f"调用模型进行主体识别完毕! 主体:{item_name}")
-    # item_name = {
-    #     "content_type": result["content_type"],
-    #     "region_name": result["region_name"],
-    #     "extracted_entities": {
-    #         "scenic_name": result["scenic_names"],
-    #         "hotel_name": result["hotel_names"],
-    #         "restaurant_name": result["restaurant_names"],
-    #         "route_name": result["route_names"],
-    #     },
-    # }
-    return json.dumps(item_name)
+    core_items = chains.invoke(messages)
+    logger.info(f"调用模型进行主体元素识别完毕! 主体核心数据:{core_items}")
+
+    content_type: str = core_items.get("content_type", "")
+    region_name:str = core_items.get("region_name", "")
+    scenic_name: list = core_items.get("scenic_name", [])
+    route_name: list = core_items.get("route_name", [])
+    hotel_name: list = core_items.get("hotel_name", [])
+    restaurant_name: list = core_items.get("restaurant_name", [])
+    components = [
+        f"内容类型: {content_type}",
+        f"地区: {region_name}",
+        f"景点名称: {'、'.join(str(item) for item in scenic_name if item)}",
+        f"线路名称: {'、'.join(str(item) for item in route_name if item)}",
+        f"酒店名称: {'、'.join(str(item) for item in hotel_name if item)}",
+        f"餐厅名称: {'、'.join(str(item) for item in restaurant_name if item)}"
+    ]
+    item_name = ", ".join(components)
+    return content_type,region_name,scenic_name,route_name,hotel_name,restaurant_name,item_name
 
 
 
@@ -253,7 +259,7 @@ def recognize_and_index_item_name(state: ImportGraphState) -> ImportGraphState:
     # chunk content title parent_title
     context =  build_document_context(chunks)
     # 3. 进行item_name的识别了 llm
-    item_name = recognize_item_name(context,file_title)
+    content_type,region_name,scenic_name,route_name,hotel_name,restaurant_name,item_name = recognize_item_name(context,file_title)
     # 4. 修改所有chunks的item_name属性
     apply_item_name(chunks,item_name)
     # 5. 对item_name进行向量化,生成稠密和稀疏向量
@@ -266,4 +272,10 @@ def recognize_and_index_item_name(state: ImportGraphState) -> ImportGraphState:
     # item_name
     state['chunks'] = chunks
     state['item_name'] = item_name
+    state['content_type'] = content_type
+    state['region_name'] = region_name
+    state['scenic_name'] = scenic_name
+    state['route_name'] = route_name
+    state['hotel_name'] = hotel_name
+    state['restaurant_name'] = restaurant_name
     return state

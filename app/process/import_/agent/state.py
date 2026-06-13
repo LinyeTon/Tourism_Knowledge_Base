@@ -31,21 +31,22 @@ class ImportGraphState(TypedDict):
     chunks : list  # 当前存储切块内容
     embeddings_content: list # 存储带有向量的切块内容
 
-    # 主体识别与元数据（核心：由 LLM 动态提取或后台定义）
-    # content_type: str  # 内容类型：景点介绍/线路推荐/酒店信息/美食推荐/交通指南/文化民俗
-    # region_name: str  # 地区/城市（如：成都、杭州）
+    #核心元数据
+    # - 内容类型：景点介绍 / 线路推荐 / 酒店信息 / 美食推荐 / 交通指南 / 文化民俗
+    content_type: str
+    # - 地区 / 城市
+    region_name: str
+    # - 景点名称
+    scenic_name: list
+    # - 线路名称
+    route_name: list
+    # - 酒店名称
+    hotel_name: list
+    # - 餐厅名称
+    restaurant_name: list
 
-    # 动态实体槽位（用于后续检索的精准匹配标签）
-    # extracted_entities: Dict[str, List[str]]
-    # 从文本中提取的实体字典：
-    # {
-    #   "scenic_name": ["武侯祠", "锦里"],
-    #   "hotel_name": [],
-    #   "restaurant_name": ["陈麻婆豆腐"]
-    # }
 
 # 提供下对外快速创建的方法
-# 模版
 default_state:ImportGraphState = {
     "task_id": "",
     "is_md_read_enabled": False,
@@ -56,15 +57,18 @@ default_state:ImportGraphState = {
     "doc_path": "",
     "file_title": "",
     "md_content": "",
-    # "item_name": dict(),
     "item_name": "",
     # "raw_chunks": [],
     "chunks": [],
     "embeddings_content": [],
-    # "content_type": "",
-    # "region_name": "",
-    # "extracted_entities": {}
+    "content_type": "",
+    "region_name": "",
+    "scenic_name": [],
+    "route_name": [],
+    "hotel_name": [],
+    "restaurant_name": [],
 }
+# 模版
 
 # 提供一个方法,可以返回我们state 并且可以根据传入参数进行对象的属性修改
 #  1. 方法() -> default_state 2. 方法(参数) -> default_state (task_id = 传入参数) -> default_state

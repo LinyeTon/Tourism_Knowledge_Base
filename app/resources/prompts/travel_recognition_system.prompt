@@ -7,12 +7,10 @@
 {
   "content_type": "string",
   "region_name": "string",
-  "extracted_entities": {
-    "scenic_name": ["string"],
-    "restaurant_name": ["string"],
-    "hotel_name": ["string"],
-    "route_name": ["string"]
-  }
+  "scenic_name": ["string"],
+  "route_name": ["string"]
+  "restaurant_name": ["string"],
+  "hotel_name": ["string"],
 }
 
 # Field Specifications
@@ -28,8 +26,7 @@
 
 2. **region_name** (字符串): 文本所指向的核心城市、地区或目的地名称（例如："杭州"、"三亚"、"成都"）。如果文本涉及多个城市，请提取最核心的那一个。
 
-3. **extracted_entities** (对象): 细粒度实体词提取：
-   - **scenic_name** (字符串数组): 提取文本中出现的所有具体景点、景区或地标名称（例如：["西湖", "断桥残雪"]）。
+3. - **scenic_name** (字符串数组): 提取文本中出现的所有具体景点、景区或地标名称（例如：["西湖", "断桥残雪"]）。
    - **restaurant_name** (字符串数组): 提取文本中出现的所有具体餐厅、饭店名称，或明确提到的当地特色美食/小吃/特产（例如：["楼外楼", "西湖醋鱼"]）。
    - **hotel_name** (字符串数组): 提取文本中出现的所有具体酒店、民宿、客栈或住宿场所的名称（例如：["雷迪森大酒店"]）。
    - **route_name** (字符串数组): 提取文本中出现的特定旅游路线或行程名称（例如：["杭州两日游精品线"]）。

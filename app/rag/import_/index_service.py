@@ -56,13 +56,21 @@ def prepare_chunks_collection() -> None:
     schema.add_field(field_name="file_title", datatype=DataType.VARCHAR, max_length=512)
 
     # 添加主体名称字段：VARCHAR 类型，最大长度 512
-    schema.add_field(field_name="item_name", datatype=DataType.JSON, max_length=512)
+    schema.add_field(field_name="item_name", datatype=DataType.VARCHAR, max_length=512)
 
     # 添加切片标题字段：VARCHAR 类型，最大长度 512
     schema.add_field(field_name="title", datatype=DataType.VARCHAR, max_length=512)
 
     # 添加父标题字段：VARCHAR 类型，最大长度 512
     schema.add_field(field_name="parent_title", datatype=DataType.VARCHAR, max_length=512)
+
+    # core_items字段
+    # schema.add_field(field_name="content_type", datatype=DataType.VARCHAR, max_length=512)
+    # schema.add_field(field_name="region_name", datatype=DataType.VARCHAR, max_length=512)
+    # schema.add_field(field_name="scenic_name", datatype=DataType.ARRAY, element_type=DataType.VARCHAR, max_length=128, max_capacity=100)
+    # schema.add_field(field_name="route_name", datatype=DataType.ARRAY, element_type=DataType.VARCHAR, max_length=128, max_capacity=100)
+    # schema.add_field(field_name="hotel_name", datatype=DataType.ARRAY, element_type=DataType.VARCHAR, max_length=128, max_capacity=100)
+    # schema.add_field(field_name="restaurant_name", datatype=DataType.ARRAY, element_type=DataType.VARCHAR, max_length=128, max_capacity=100)
 
     # 添加切片序号字段：INT8 类型
     schema.add_field(field_name="part", datatype=DataType.INT8)

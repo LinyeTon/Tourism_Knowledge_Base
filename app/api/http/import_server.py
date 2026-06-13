@@ -49,7 +49,7 @@ app.add_middleware(
 # 1. 返回import.html文件
 @app.get("/html")
 def html():
-    html_path_obj = PROJECT_ROOT / "app" / "resources" / "html" / "index.html"
+    html_path_obj = PROJECT_ROOT / "app" / "resources" / "html" / "index2.html"
     return FileResponse(
         path=html_path_obj,
         media_type=guess_type(html_path_obj.name)[0]
