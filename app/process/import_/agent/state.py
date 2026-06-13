@@ -57,7 +57,7 @@ default_state:ImportGraphState = {
     "file_title": "",
     "md_content": "",
     # "item_name": dict(),
-    "item_name": str,
+    "item_name": "",
     # "raw_chunks": [],
     "chunks": [],
     "embeddings_content": [],
