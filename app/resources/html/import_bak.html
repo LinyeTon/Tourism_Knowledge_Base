@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 旅游智库 - 神经元数据注入节点</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        /* 核心科技感变量 */
+        :root {
+            --neon-blue: #3b82f6;
+            --neon-green: #10b981;
+            --neon-red: #ef4444;
+            --bg-color: #020617;
+        }
+
+        /* 1. 动态流光背景 */
+        body {
+            background: linear-gradient(-45deg, #020617, #0f172a, #1e1b4b, #020617);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #f8fafc;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 2. 极致玻璃拟态卡片 */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 3. 拖拽区域交互动效 */
+        .dropzone {
+            border: 2px dashed rgba(59, 130, 246, 0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .dropzone::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            opacity: 0; transition: opacity 0.4s;
+        }
+        .dropzone:hover {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+        }
+        .dropzone:hover::before { opacity: 1; }
+        .dropzone.drag-active {
+            border-color: var(--neon-blue);
+            background: rgba(59, 130, 246, 0.05);
+            transform: scale(1.02);
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
+        }
+
+        /* 4. 激光进度条 */
+        .laser-progress-container {
+            background: #1e293b;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .laser-progress {
+            background: linear-gradient(90deg, transparent, var(--neon-blue), #60a5fa);
+            box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
+            transition: width 0.5s ease-out;
+            position: relative;
+        }
+        .laser-progress::after {
+            content: ''; position: absolute; right: 0; top: -2px; bottom: -2px; width: 4px;
+            background: #fff; box-shadow: 0 0 10px #fff; border-radius: 50%;
+        }
+
+        /* 5. 炫酷滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.6); }
+
+        /* 6. Toast 提示框 */
+        #toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 12px; }
+        .toast {
+            min-width: 300px; padding: 16px 24px; border-radius: 12px;
+            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(10px);
+            border-left: 4px solid var(--neon-blue); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex; align-items: center; gap: 12px;
+            transform: translateX(120%); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.error { border-left-color: var(--neon-red); }
+        .toast.success { border-left-color: var(--neon-green); }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center">
+
+    <div id="toast-container"></div>
+
+    <div class="w-full max-w-5xl animate__animated animate__fadeInDown">
+        <header class="text-center mb-12 mt-8">
+            <div class="inline-flex items-center justify-center p-3 rounded-2xl glass-panel mb-6 border border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+                <i class="ph-fill ph-brain text-4xl text-blue-400 animate-pulse"></i>
+            </div>
+            <h1 class="text-5xl font-black mb-4 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400">
+                知识库神经元注入节点
+            </h1>
+            <p class="text-slate-400 text-lg">拖拽文档 ➔ LangGraph 意图识别 ➔ 向量降维存储 ➔ 挂载完成</p>
+        </header>
+
+        <div id="dropZone" class="glass-panel dropzone rounded-3xl p-16 text-center cursor-pointer mb-10 group">
+            <div class="absolute inset-0 flex items-center justify-center opacity-5 group-hover:opacity-10 transition-opacity">
+                <i class="ph-bold ph-upload-simple text-[15rem]"></i>
+            </div>
+            <div class="relative z-10 flex flex-col items-center">
+                <i class="ph-duotone ph-file-arrow-up text-6xl text-blue-400 mb-6 group-hover:-translate-y-2 transition-transform duration-300"></i>
+                <h3 class="text-2xl font-bold text-slate-100 mb-2">部署旅游数据资产</h3>
+                <p class="text-slate-400 mb-6">点击选择，或将 .md / .pdf 攻略文件拖拽至此引力区</p>
+                <div class="flex gap-4 text-sm font-mono text-slate-500">
+                    <span class="bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">Max: 50MB</span>
+                    <span class="bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">PDF / MD / TXT</span>
+                </div>
+            </div>
+            <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.md,.txt">
+        </div>
+
+        <div class="flex items-center justify-between mb-6 px-2">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <i class="ph-fill ph-cpu text-blue-400"></i> 处理矩阵
+            </h2>
+            <span id="taskCounter" class="text-sm font-mono bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full">0 活跃任务</span>
+        </div>
+
+        <div id="fileList" class="space-y-6">
+            </div>
+    </div>
+
+    <script>
+        // 配置常量
+        const API_BASE = window.location.origin; // 实际部署替换为后端地址，如 'http://localhost:8000'
+        let activeTasksCount = 0;
+
+        // DOM 元素引用
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileList = document.getElementById('fileList');
+        const toastContainer = document.getElementById('toast-container');
+        const taskCounter = document.getElementById('taskCounter');
+
+        // ==========================================
+        // 交互逻辑：极致的拖拽体验
+        // ==========================================
+        dropZone.onclick = () => fileInput.click();
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files), false);
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files), false);
+
+        // ==========================================
+        // 核心功能：文件处理与校验
+        // ==========================================
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'], i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function handleFiles(files) {
+            const validExtensions = ['.pdf', '.md', '.txt', '.docx'];
+
+            Array.from(files).forEach(file => {
+                // 前端拦截：文件大小与格式校验
+                const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                if (!validExtensions.includes(ext)) {
+                    showToast(`格式拦截: 暂不支持 ${ext} 文件`, 'error');
+                    return;
+                }
+                if (file.size > 50 * 1024 * 1024) {
+                    showToast(`体积拦截: ${file.name} 超过 50MB 限制`, 'error');
+                    return;
+                }
+                uploadAndProcessFile(file);
+            });
+        }
+
+        // ==========================================
+        // 后端通信与状态机管理
+        // ==========================================
+        async function uploadAndProcessFile(file) {
+            updateTaskCount(1);
+            const tempId = 'sys-task-' + Math.random().toString(36).substr(2, 9);
+            const fileSizeStr = formatFileSize(file.size);
+
+            renderFileCard(tempId, file.name, fileSizeStr);
+            showToast(`已将 ${file.name} 送入量子队列`, 'info');
+
+            const formData = new FormData();
+            formData.append('files', file);
+
+            try {
+                // 模拟 API 请求或真实请求
+                const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (res.ok && data.code === 200) {
+                    const realTaskId = data.task_ids[0];
+                    document.getElementById(tempId).id = realTaskId; // 替换 ID
+                    startRealtimePolling(realTaskId);
+                } else {
+                    updateCardState(tempId, 'failed', data.message || '网关拒绝了请求');
+                    updateTaskCount(-1);
+                }
+            } catch (err) {
+                // 如果后端没开，提供友好的前端报错
+                updateCardState(tempId, 'failed', '与智库中心断开连接 (Network Error)');
+                updateTaskCount(-1);
+                showToast('API 节点未响应，请检查后端运行状态', 'error');
+            }
+        }
+
+        function startRealtimePolling(taskId) {
+            const timer = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/status/${taskId}`);
+                    const data = await res.json();
+                    const card = document.getElementById(taskId);
+
+                    if (!card) return clearInterval(timer); // 卡片被用户关掉则停止轮询
+
+                    updateCardState(taskId, data.status, data.progress, data.message, data.done_list, data.running_list);
+
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(timer);
+                        updateTaskCount(-1);
+                        if(data.status === 'completed') showToast(`节点解析完成！`, 'success');
+                    }
+                } catch (e) {
+                    // 忽略短暂的轮询网络错误
+                }
+            }, 1500); // 1.5s 一次高频心跳
+        }
+
+        // ==========================================
+        // UI 渲染与视图更新
+        // ==========================================
+        function renderFileCard(id, name, sizeStr) {
+            const html = `
+                <div id="${id}" class="glass-panel rounded-2xl p-6 transition-all duration-500 border-l-4 border-blue-500 animate__animated animate__fadeInUp">
+                    <div class="flex justify-between items-start mb-5">
+                        <div class="flex items-center gap-4">
+                            <div class="p-3 bg-slate-800 rounded-xl border border-slate-700">
+                                <i class="ph-duotone ph-file-text text-3xl text-blue-400 file-icon"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                                    ${name} <span class="text-xs font-mono bg-slate-800 text-slate-400 px-2 py-0.5 rounded">${sizeStr}</span>
+                                </h3>
+                                <div class="flex items-center text-sm text-blue-400 mt-1 font-mono tracking-wide">
+                                    <i class="ph-bold ph-spinner-gap animate-spin mr-2 status-icon"></i>
+                                    <span class="status-text">初始化节点环境...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-xs font-mono text-slate-500 bg-slate-900 border border-slate-700 px-3 py-1 rounded-full opacity-50 hover:opacity-100 transition-opacity">
+                            ${id.substr(0, 10)}...
+                        </span>
+                    </div>
+
+                    <div class="w-full h-1.5 rounded-full mb-5 laser-progress-container">
+                        <div class="laser-progress h-full w-5" style="width: 5%"></div>
+                    </div>
+
+                    <div class="bg-[#0b1120] rounded-xl border border-slate-800 p-4 relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500/20"></div>
+                        <div class="log-container text-xs font-mono text-slate-400 space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                            <div class="text-slate-500 opacity-50">等待 LangGraph 引擎响应...</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            fileList.insertAdjacentHTML('afterbegin', html);
+        }
+
+        function updateCardState(id, status, progress, errorMsg = "", doneList = [], runningList = []) {
+            const card = document.getElementById(id);
+            if (!card) return;
+
+            const statusText = card.querySelector('.status-text');
+            const statusIcon = card.querySelector('.status-icon');
+            const fileIcon = card.querySelector('.file-icon');
+            const bar = card.querySelector('.laser-progress');
+            const logBox = card.querySelector('.log-container');
+
+            // 1. 更新日志面板 (自动滚动到底部)
+            if (doneList.length > 0 || runningList.length > 0) {
+                const logs = [
+                    ...doneList.map(l => `<div class="text-emerald-400"><i class="ph-bold ph-check mr-1"></i> [${new Date().toLocaleTimeString()}] ${l}</div>`),
+                    ...runningList.map(l => `<div class="text-blue-400"><i class="ph-bold ph-arrow-right mr-1"></i> [${new Date().toLocaleTimeString()}] 正在计算: ${l}...</div>`)
+                ];
+                logBox.innerHTML = logs.join('');
+                logBox.scrollTop = logBox.scrollHeight; // 滚动到底部
+            }
+
+            // 2. 更新状态机表现层
+            if (status === 'completed') {
+                statusText.innerText = "数据固化完毕，神经元已连通";
+                statusText.className = "status-text text-emerald-400";
+                statusIcon.className = "ph-fill ph-check-circle mr-2 status-icon text-emerald-500";
+                fileIcon.className = "ph-duotone ph-file-text text-3xl text-emerald-400 file-icon";
+                bar.style.width = "100%";
+                bar.style.background = "linear-gradient(90deg, transparent, #10b981, #34d399)";
+                bar.style.boxShadow = "0 0 10px #10b981";
+                card.className = card.className.replace('border-blue-500', 'border-emerald-500');
+            } else if (status === 'failed') {
+                statusText.innerText = "融合崩溃: " + errorMsg;
+                statusText.className = "status-text text-red-400";
+                statusIcon.className = "ph-fill ph-warning-circle mr-2 status-icon text-red-500";
+                fileIcon.className = "ph-duotone ph-file-text text-3xl text-red-400 file-icon";
+                bar.style.width = "100%";
+                bar.style.background = "linear-gradient(90deg, transparent, #ef4444, #f87171)";
+                bar.style.boxShadow = "0 0 10px #ef4444";
+                card.className = card.className.replace('border-blue-500', 'border-red-500');
+                if(errorMsg) logBox.innerHTML += `<div class="text-red-400 mt-2"><i class="ph-bold ph-bug mr-1"></i> FATAL: ${errorMsg}</div>`;
+            } else {
+                statusText.innerText = "大模型提取与切片中...";
+                bar.style.width = (progress || Math.min(doneList.length * 20 + 5, 90)) + "%";
+            }
+        }
+
+        // ==========================================
+        // 全局微交互功能
+        // ==========================================
+        function showToast(msg, type = 'info') {
+            const toast = document.createElement('div');
+            const iconMap = {
+                'info': '<i class="ph-fill ph-info text-blue-400 text-xl"></i>',
+                'success': '<i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>',
+                'error': '<i class="ph-fill ph-warning-octagon text-red-400 text-xl"></i>'
+            };
+
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `${iconMap[type]} <span class="font-medium text-sm tracking-wide">${msg}</span>`;
+
+            toastContainer.appendChild(toast);
+
+            // 触发进入动画
+            requestAnimationFrame(() => toast.classList.add('show'));
+
+            // 3秒后移除
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 400); // 等待 CSS 动画完成
+            }, 3000);
+        }
+
+        function updateTaskCount(change) {
+            activeTasksCount += change;
+            taskCounter.innerText = `${activeTasksCount} 活跃任务`;
+            if(activeTasksCount > 0) {
+                taskCounter.classList.replace('text-blue-400', 'text-emerald-400');
+                taskCounter.classList.replace('bg-blue-500/20', 'bg-emerald-500/20');
+            } else {
+                taskCounter.classList.replace('text-emerald-400', 'text-blue-400');
+                taskCounter.classList.replace('bg-emerald-500/20', 'bg-blue-500/20');
+            }
+        }
+    </script>
+</body>
+</html>

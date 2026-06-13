@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>旅游智库 - 智能数据导入</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Inter', system-ui; }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .upload-dashed {
+            border: 2px dashed #3b82f6;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .upload-dashed:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: #60a5fa;
+            transform: scale(1.01);
+        }
+        .progress-shimmer {
+            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .log-item { border-left: 2px solid #334155; padding-left: 12px; margin-bottom: 8px; position: relative; }
+        .log-item::before { content: ''; position: absolute; left: -5px; top: 8px; width: 8px; height: 8px; background: #3b82f6; border-radius: 50%; }
+    </style>
+</head>
+<body class="p-8 flex flex-col items-center">
+
+    <div class="w-full max-w-4xl animate__animated animate__fadeIn">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
+                旅游智库 RAG 导入中心
+            </h1>
+            <p class="text-slate-400">基于 LangGraph 的智能解析与自动化元数据管理</p>
+        </header>
+
+        <div id="dropZone" class="glass-card upload-dashed rounded-2xl p-12 text-center cursor-pointer mb-8">
+            <div class="text-6xl mb-4">📂</div>
+            <p class="text-lg font-medium text-slate-200">点击或拖拽旅游攻略文件 (PDF/MD)</p>
+            <p class="text-sm text-slate-500 mt-2">支持单次上传多份文档，后台自动任务并行处理</p>
+            <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.md">
+        </div>
+
+        <div id="fileList" class="space-y-4">
+            </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileList = document.getElementById('fileList');
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleFiles(e.target.files);
+
+        // 拖拽支持
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('bg-blue-900/20'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('bg-blue-900/20');
+        dropZone.ondrop = (e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
+
+        function handleFiles(files) {
+            Array.from(files).forEach(uploadFile);
+        }
+
+        async function uploadFile(file) {
+            const taskId_temp = 'id-' + Math.random().toString(36).substr(2, 9);
+            renderFileItem(taskId_temp, file.name);
+
+            const formData = new FormData();
+            formData.append('files', file);
+
+            try {
+                const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    const realTaskId = data.task_ids[0];
+                    updateFileId(taskId_temp, realTaskId);
+                    startPolling(realTaskId);
+                } else {
+                    markAsFailed(taskId_temp, data.message);
+                }
+            } catch (err) {
+                markAsFailed(taskId_temp, "网络连接异常");
+            }
+        }
+
+        function renderFileItem(id, name) {
+            const html = `
+                <div id="${id}" class="glass-card rounded-xl p-6 transition-all duration-500 border-l-4 border-blue-500">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-100">${name}</h3>
+                            <div class="flex items-center text-sm text-slate-400 mt-1">
+                                <span class="status-dot bg-blue-500 animate-pulse"></span>
+                                <span class="status-text">准备上传...</span>
+                            </div>
+                        </div>
+                        <span class="text-xs font-mono text-slate-500 bg-slate-800 px-2 py-1 rounded">TASK: ${id.substr(0,8)}</span>
+                    </div>
+
+                    <div class="w-full bg-slate-800 rounded-full h-2 mb-4 overflow-hidden">
+                        <div class="progress-bar progress-shimmer h-full w-0 transition-all duration-300"></div>
+                    </div>
+
+                    <details class="group">
+                        <summary class="list-none cursor-pointer flex items-center text-xs text-slate-500 hover:text-blue-400 transition-colors">
+                            <span class="mr-1">▶</span> 流程日志轨迹
+                        </summary>
+                        <div class="log-container mt-3 text-xs text-slate-400 space-y-2 max-h-40 overflow-y-auto">
+                            </div>
+                    </details>
+                </div>
+            `;
+            fileList.insertAdjacentHTML('afterbegin', html);
+        }
+
+        function startPolling(taskId) {
+            const timer = setInterval(async () => {
+                const res = await fetch(`${API_BASE}/status/${taskId}`);
+                const data = await res.json();
+                const el = document.getElementById(taskId);
+                if (!el) return clearInterval(timer);
+
+                const statusText = el.querySelector('.status-text');
+                const dot = el.querySelector('.status-dot');
+                const bar = el.querySelector('.progress-bar');
+                const logBox = el.querySelector('.log-container');
+
+                // 更新日志
+                const logs = [...data.done_list.map(l => `[完成] ${l}`), ...data.running_list.map(l => `[处理] ${l}...`)];
+                logBox.innerHTML = logs.map(l => `<div class="log-item animate__animated animate__fadeIn">${l}</div>`).join('');
+
+                if (data.status === 'completed') {
+                    statusText.innerText = "知识库导入成功";
+                    dot.className = "status-dot bg-emerald-500";
+                    bar.style.width = "100%";
+                    bar.classList.remove('progress-shimmer');
+                    el.classList.replace('border-blue-500', 'border-emerald-500');
+                    clearInterval(timer);
+                } else if (data.status === 'failed') {
+                    statusText.innerText = "处理失败: " + (data.message || "未知错误");
+                    dot.className = "status-dot bg-red-500";
+                    el.classList.replace('border-blue-500', 'border-red-500');
+                    clearInterval(timer);
+                } else {
+                    statusText.innerText = "智能解析中...";
+                    // 模拟进度增加
+                    const currentProgress = Math.min(data.done_list.length * 20, 95);
+                    bar.style.width = currentProgress + "%";
+                }
+            }, 2000);
+        }
+
+        function updateFileId(oldId, newId) {
+            const el = document.getElementById(oldId);
+            if (el) el.id = newId;
+        }
+
+        function markAsFailed(id, msg) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.querySelector('.status-text').innerText = msg;
+                el.querySelector('.status-dot').className = "status-dot bg-red-500";
+                el.classList.replace('border-blue-500', 'border-red-500');
+            }
+        }
+    </script>
+</body>
+</html>

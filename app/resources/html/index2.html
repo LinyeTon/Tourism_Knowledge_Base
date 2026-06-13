@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>LangGraph 旅游 RAG 系统</title>
+  <style>
+    /* ====== 基础样式 ====== */
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background-color: #F8FAFC;
+      color: #333;
+    }
+    header {
+      background-color: #002FA7;
+      color: white;
+      text-align: center;
+      padding: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .card {
+      background: white;
+      padding: 2rem;
+      margin: 1rem;
+      text-align: center;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      transform: translateY(-3px);
+    }
+    button {
+      background-color: #002FA7;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background-color: #001f80;
+    }
+    input[type="file"] {
+      margin-bottom: 1rem;
+    }
+
+    /* ====== Chat 样式 ====== */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      background: white;
+      height: 400px;
+      padding: 1rem;
+      overflow-y: auto;
+      gap: 0.5rem;
+    }
+    .message {
+      max-width: 70%;
+      padding: 0.5rem 1rem;
+      border-radius: 1rem;
+      word-wrap: break-word;
+    }
+    .message.user {
+      background: #fff;
+      align-self: flex-end;
+    }
+    .message.ai {
+      background: #E0F0FF;
+      align-self: flex-start;
+    }
+    .input-container {
+      display: flex;
+      margin-top: 0.5rem;
+      gap: 0.5rem;
+    }
+    .input-container input {
+      flex: 1;
+      padding: 0.5rem;
+      border-radius: 0.3rem;
+      border: 1px solid #ccc;
+    }
+
+    /* 隐藏页面 */
+    .page { display: none; }
+    .active { display: block; }
+  </style>
+</head>
+<body>
+
+<header>LangGraph 旅游 RAG 系统</header>
+
+<div class="container">
+
+  <!-- ===== 首页 ===== -->
+  <div id="homePage" class="page active">
+    <div class="card" onclick="showPage('uploadPage')">
+      <h2>知识库构建</h2>
+      <p>上传文档，构建旅游知识库</p>
+    </div>
+    <div class="card" onclick="showPage('chatPage')">
+      <h2>智能客服查询</h2>
+      <p>基于知识库进行问答交互</p>
+    </div>
+  </div>
+
+  <!-- ===== 上传页面 ===== -->
+  <div id="uploadPage" class="page">
+    <button onclick="showPage('homePage')">返回首页</button>
+    <h2>上传文档构建知识库</h2>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">上传文件</button>
+    <p id="uploadStatus"></p>
+  </div>
+
+  <!-- ===== Chat 页面 ===== -->
+  <div id="chatPage" class="page">
+    <button onclick="showPage('homePage')">返回首页</button>
+    <h2>旅游智能问答</h2>
+    <div class="chat-container" id="chatContainer"></div>
+    <div class="input-container">
+      <input type="text" id="chatInput" placeholder="输入你的问题...">
+      <button onclick="sendMessage()">发送</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ===== 页面切换 =====
+  function showPage(pageId){
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+  }
+
+  // ===== 上传文件 =====
+  async function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('uploadStatus');
+    if(fileInput.files.length === 0){
+      alert("请选择文件");
+      return;
+    }
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append("files", file);
+
+    status.textContent = "上传中...";
+
+    try{
+      const response = await fetch('/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      status.textContent = "上传成功! Task ID: " + data.task_ids[0];
+
+      // 可选: 轮询获取状态
+      pollStatus(data.task_ids[0]);
+
+    }catch(err){
+      console.error(err);
+      status.textContent = "上传失败，请重试";
+    }
+  }
+
+  async function pollStatus(taskId){
+    const status = document.getElementById('uploadStatus');
+    const interval = setInterval(async () => {
+      try{
+        const res = await fetch(`/status/${taskId}`);
+        const data = await res.json();
+        status.textContent = `任务状态: ${data.status}`;
+        if(data.status === 'COMPLETED' || data.status === 'FAILED'){
+          clearInterval(interval);
+          status.textContent = `任务完成: ${data.status}`;
+        }
+      }catch(err){
+        console.error(err);
+      }
+    }, 2000);
+  }
+
+  // ===== 聊天 =====
+  const chatContainer = document.getElementById('chatContainer');
+  async function sendMessage(){
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if(!text) return;
+
+    appendMessage(text, 'user');
+    input.value = '';
+
+    appendMessage("AI 正在思考...", 'ai', true);
+    try{
+      // 调用后端问答接口 (预留)
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ query: text })
+      });
+      const data = await res.json();
+      removeTempAIMessage();
+      appendMessage(data.answer || "AI 未返回结果", 'ai');
+    }catch(err){
+      removeTempAIMessage();
+      appendMessage("服务异常，请重试", 'ai');
+      console.error(err);
+    }
+  }
+
+  function appendMessage(msg, role, temp=false){
+    const div = document.createElement('div');
+    div.className = 'message ' + role;
+    div.textContent = msg;
+    if(temp) div.id = 'tempAI';
+    chatContainer.appendChild(div);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  function removeTempAIMessage(){
+    const temp = document.getElementById('tempAI');
+    if(temp) temp.remove();
+  }
+
+</script>
+
+</body>
+</html>

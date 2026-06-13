@@ -89,7 +89,7 @@ if __name__ == "__main__":
     logger.info("===== 开始执行知识图谱导入全流程测试 =====")
 
     # 1. 构造测试文件路径（复用你项目的doc目录）
-    test_pdf_name = os.path.join("doc", "hak180产品安全手册.pdf")
+    test_pdf_name = os.path.join("doc", "三亚交通指南.md")
     test_pdf_path = os.path.join(PROJECT_ROOT, test_pdf_name)
 
     # 2. 构造输出目录（存放MD/图片等中间文件）

@@ -56,7 +56,7 @@ def prepare_chunks_collection() -> None:
     schema.add_field(field_name="file_title", datatype=DataType.VARCHAR, max_length=512)
 
     # 添加主体名称字段：VARCHAR 类型，最大长度 512
-    schema.add_field(field_name="item_name", datatype=DataType.VARCHAR, max_length=512)
+    schema.add_field(field_name="item_name", datatype=DataType.JSON, max_length=512)
 
     # 添加切片标题字段：VARCHAR 类型，最大长度 512
     schema.add_field(field_name="title", datatype=DataType.VARCHAR, max_length=512)

@@ -25,13 +25,14 @@ def resolve_input_file(state: ImportGraphState) -> ImportGraphState:
         state['is_md_read_enabled'] = True
         state['md_path'] = local_file_path
     # 4. 判断是pdf is_doc_read_enabled = True  doc_path =  local_file_path
-    elif local_file_path.endswith(".pdf"):
+    # elif local_file_path.endswith(".pdf"):
+    else:
         state['is_doc_read_enabled'] = True
         state['doc_path'] = local_file_path
     # 5. else啥也不是  打印日志 warring  直接返回 state
-    else:
-        logger.warning(f"传入的文件:{local_file_path}类型无法处理,当前项目只支持 md / pdf类型,直接跳转到END节点!")
-        return state
+    # else:
+    #     logger.warning(f"传入的文件:{local_file_path}类型无法处理,当前项目只支持 md / pdf类型,直接跳转到END节点!")
+    #     return state
     # 6. 处理local_file_path -> file_title -> state
     # local_file_path -> str -> 路径 ->
     # Path -> .name = xx.md  .stem = xx  .suffix = .md  .parent .parents[1]

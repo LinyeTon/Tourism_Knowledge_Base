@@ -1,3 +1,5 @@
+import json
+
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
 from pymilvus import DataType
@@ -73,9 +75,6 @@ def build_document_context(chunks) -> str:
 # 7. 返回识别出的主体名称
 @step_log("recognize_item_name")
 def recognize_item_name(context:str, file_title:str):
-    scenic_name = ''
-    route_name = ''
-    region_name = ''
     # 1. 获取llm的客户端对象 (lm/providers .chat())
     chat_model = llm_provider.chat()
     # 2. 加载外部的提示词
@@ -94,22 +93,23 @@ def recognize_item_name(context:str, file_title:str):
     chains = chat_model | JsonOutputParser()
     # 5. 执行调用链获取item_name
     item_name = chains.invoke(messages)
-    logger.info(f"调用模型进行item_name识别完毕! item_name:{item_name}")
-    # 6. 进行非空判断和兜底赋值
-    if  len(item_name) != 0:
-        pass
-        scenic_name = item_name.get("scenic_name")
-        route_name = item_name.get("route_name")
-        region_name = item_name.get("region_name")
-    else:
-        item_name = file_title
-    # 7. 返回item_name
-    return str(item_name), scenic_name, route_name, region_name
+    logger.info(f"调用模型进行主体识别完毕! 主体:{item_name}")
+    # item_name = {
+    #     "content_type": result["content_type"],
+    #     "region_name": result["region_name"],
+    #     "extracted_entities": {
+    #         "scenic_name": result["scenic_names"],
+    #         "hotel_name": result["hotel_names"],
+    #         "restaurant_name": result["restaurant_names"],
+    #         "route_name": result["route_names"],
+    #     },
+    # }
+    return json.dumps(item_name)
 
 
 
 @step_log("apply_item_name")
-def apply_item_name(chunks: list[dict], item_name: str):
+def apply_item_name(chunks: list[dict], item_name):
     """
       给chunks -> chunk -> item_name赋值
     :param chunks:
@@ -122,7 +122,7 @@ def apply_item_name(chunks: list[dict], item_name: str):
     logger.info(f"完成chunks的item_name数据补充! {chunks[0]['item_name']}")
 
 @step_log("embed_item_name")
-def embed_item_name(item_name: str) :
+def embed_item_name(item_name) :
     """
         根据item_name生成稠密和稀疏向量
     :param item_name:
@@ -209,7 +209,7 @@ def prepare_item_name_collection():
 
 
 @step_log("upsert_item_name")
-def upsert_item_name(item_name: str, file_title: str, dense_vector: list[float], sparse_vector: dict[int, float]):
+def upsert_item_name(item_name, file_title: str, dense_vector: list[float], sparse_vector: dict[int, float]):
     """
       先删除 / 再插入 幂等性
     :param item_name:
@@ -253,7 +253,7 @@ def recognize_and_index_item_name(state: ImportGraphState) -> ImportGraphState:
     # chunk content title parent_title
     context =  build_document_context(chunks)
     # 3. 进行item_name的识别了 llm
-    item_name, scenic_name, route_name, region_name  = recognize_item_name(context,file_title)
+    item_name = recognize_item_name(context,file_title)
     # 4. 修改所有chunks的item_name属性
     apply_item_name(chunks,item_name)
     # 5. 对item_name进行向量化,生成稠密和稀疏向量
@@ -266,7 +266,4 @@ def recognize_and_index_item_name(state: ImportGraphState) -> ImportGraphState:
     # item_name
     state['chunks'] = chunks
     state['item_name'] = item_name
-    state['scenic_name'] = scenic_name
-    state['route_name'] = route_name
-    state['region_name'] = region_name
     return state

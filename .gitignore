@@ -167,3 +167,4 @@ logs/
 tests/
 doc/
 models/
+tmp/
