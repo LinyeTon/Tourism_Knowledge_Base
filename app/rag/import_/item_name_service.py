@@ -102,14 +102,22 @@ def recognize_item_name(context:str, file_title:str):
     hotel_name: list = core_items.get("hotel_name", [])
     restaurant_name: list = core_items.get("restaurant_name", [])
     components = [
-        f"内容类型: {content_type}",
-        f"地区: {region_name}",
-        f"景点名称: {'、'.join(str(item) for item in scenic_name if item)}",
-        f"线路名称: {'、'.join(str(item) for item in route_name if item)}",
-        f"酒店名称: {'、'.join(str(item) for item in hotel_name if item)}",
-        f"餐厅名称: {'、'.join(str(item) for item in restaurant_name if item)}"
+        f"content_type: {content_type}",
+        f"region_name: {region_name}",
+        f"scenic_name: {'、'.join(str(item) for item in scenic_name if item)}",
+        f"route_name: {'、'.join(str(item) for item in route_name if item)}",
+        f"hotel_name: {'、'.join(str(item) for item in hotel_name if item)}",
+        f"restaurant_name: {'、'.join(str(item) for item in restaurant_name if item)}"
     ]
-    item_name = ", ".join(components)
+    components = [
+        f"content_type: {content_type}" if content_type else None,
+        f"region_name: {region_name}" if region_name else None,
+        f"scenic_name: {'、'.join(str(i) for i in scenic_name if i)}" if scenic_name else None,
+        f"route_name: {'、'.join(str(i) for i in route_name if i)}" if route_name else None,
+        f"hotel_name: {'、'.join(str(i) for i in hotel_name if i)}" if hotel_name else None,
+        f"restaurant_name: {'、'.join(str(i) for i in restaurant_name if i)}" if restaurant_name else None
+    ]
+    item_name = ", ".join(filter(None, components))
     return content_type,region_name,scenic_name,route_name,hotel_name,restaurant_name,item_name
 
 
