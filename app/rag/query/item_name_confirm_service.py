@@ -9,7 +9,7 @@ from app.shared.runtime.load_prompt import  load_prompt
 from app.infra.vectorstore.milvus_gateway import milvus_gateway
 
 
-@step_log("get_data_and_validates")
+# @step_log("get_data_and_validates")
 def get_data_and_validates(state:QueryGraphState) -> tuple[str,str]:
     """
     进行必要参数校验!
@@ -27,7 +27,7 @@ def get_data_and_validates(state:QueryGraphState) -> tuple[str,str]:
 
     return original_query,session_id
 
-@step_log("get_history_messages")
+# @step_log("get_history_messages")
 def get_history_messages(session_id:str, limit:int = 10) -> list[dict]:
     """
     获取历史聊天记录! 倒序 limit=10
@@ -43,7 +43,7 @@ def get_history_messages(session_id:str, limit:int = 10) -> list[dict]:
     logger.info(f"校验后历史记录数量:{len(final_message_list)}")
     return final_message_list
 
-@step_log("build_history_context_text")
+# @step_log("build_history_context_text")
 def build_history_context_text(history_message_list) -> str:
     """
      构建当前会话对应的上下文!
@@ -205,7 +205,7 @@ def select_item_names(milvus_result_dict):
         "options_item_name_list":options_item_name_list
     }
 
-@step_log("change_state_status")
+# @step_log("change_state_status")
 def change_state_status(state, item_name_dict, rewritten_query):
     """
      修改state状态
@@ -245,7 +245,7 @@ def change_state_status(state, item_name_dict, rewritten_query):
     answer = f"没有在你的提问中识别主体,请确认,再提问!!"
     state['answer'] = answer
 
-@step_log("save_history_message")
+# @step_log("save_history_message")
 def save_history_message(state):
     """
     保存聊天记录
@@ -260,7 +260,7 @@ def save_history_message(state):
         item_names=state.get("item_names",[])
     )
 
-@step_log("confirm_item_name")
+# @step_log("confirm_item_name")
 def confirm_item_name(state: QueryGraphState) -> QueryGraphState:
     """
     意图确认服务：
@@ -281,7 +281,7 @@ def confirm_item_name(state: QueryGraphState) -> QueryGraphState:
 
     item_name_dict = {}
     # 5. 进行校验,如果没有item_names无需调用向量查询
-    if len(result_dict['item_names']) > 0:
+    if result_dict['content_type'] and len(result_dict['item_names']) > 0:
         # 6.进行item_names内部识别到模型名称的向量化查询
         # 参数 item_names 即可! 响应: {item_name(这个是模型查询到的):[ 存储从milvus中匹配 {item_name: 名字 , score: 分数} .. 应该是5个]}
         milvus_result_dict:dict[str,list[dict]] = query_item_name_milvus(result_dict['item_names'])

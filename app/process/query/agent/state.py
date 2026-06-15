@@ -31,6 +31,9 @@ class QueryGraphState(TypedDict):
     is_stream: bool  # 是否流式输出标记
     image_urls: List[str]  # 答案中引用的图片链接
 
+    # 核心标签
+
+
 
 # ========================
 # 默认状态（全部为空）

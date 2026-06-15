@@ -23,6 +23,7 @@ def get_reranker_model() -> FlagReranker:
             model_name_or_path=reranker_config.bge_reranker_large,
             device=reranker_config.bge_reranker_device,
             use_fp16=reranker_config.bge_reranker_fp16,
+            # max_length=1024
         )
         logger.success("重排模型初始化成功")
     return _reranker_model

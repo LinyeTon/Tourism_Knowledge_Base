@@ -11,7 +11,7 @@
                 extend: {
                     colors: {
                         klein: {
-                            DEFAULT: '#002FA7', // 克莱因蓝主色
+                            DEFAULT: '#002FA7',
                             light: '#1A4FFF',
                             dark: '#002280',
                             bg: '#F4F7FF',
@@ -31,7 +31,6 @@
             font-family: 'Inter', 'Noto Sans SC', sans-serif;
             background-color: #F8FAFC;
         }
-        /* 自定义美化滚动条 */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -46,14 +45,59 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94A3B8;
         }
+        /* 打字机光标动画 */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        .cursor-blink::after {
+            content: '▋';
+            animation: blink 1s infinite;
+            color: #002FA7;
+            font-weight: bold;
+        }
+
+        /* 用户消息气泡样式 - 紧凑 */
+        .user-bubble {
+            background-color: #002FA7;
+            color: white;
+            border-radius: 12px 12px 4px 12px;
+            padding: 8px 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 400px;
+        }
+
+        /* AI消息气泡样式 - 保持段落格式 */
+        .ai-bubble {
+            background-color: white;
+            border: 1px solid #f1f5f9;
+            border-radius: 12px 12px 12px 4px;
+            padding: 12px 16px;
+            font-size: 14px;
+            line-height: 1.7;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+
+        /* AI消息中的段落间距 */
+        .ai-bubble p {
+            margin-bottom: 8px;
+        }
+
+        .ai-bubble p:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col selection:bg-klein selection:text-white">
 
     <script>
-        // 【关键配置】后端的真实 IP 端口
-        const IMPORT_URL = 'http://127.0.0.1:8000'; // 对应 import_server.py (知识库构建与状态轮询)
-        const QUERY_URL = 'http://127.0.0.1:8001';  // 对应 query_server.py (智能客服问答)
+        // 后端接口配置
+        const IMPORT_URL = 'http://127.0.0.1:8000';
+        const QUERY_URL = 'http://127.0.0.1:8001';
     </script>
 
     <header class="bg-white border-b border-slate-100 sticky top-0 z-50">
@@ -74,6 +118,7 @@
 
     <main class="flex-1 flex flex-col justify-center max-w-7xl w-full mx-auto px-6 py-8 relative">
 
+        <!-- 首页视图 -->
         <div id="view-home" class="w-full max-w-4xl mx-auto space-y-12">
             <div class="text-center space-y-4">
                 <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
@@ -127,6 +172,7 @@
             </div>
         </div>
 
+        <!-- 上传视图 -->
         <div id="view-upload" class="w-full max-w-2xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-elegant p-8 hidden">
             <div class="flex items-center space-x-3 mb-6">
                 <button onclick="switchView('home')" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
@@ -188,6 +234,7 @@
             </div>
         </div>
 
+        <!-- 聊天视图 -->
         <div id="view-chat" class="w-full max-w-4xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-elegant flex flex-col h-[75vh] hidden overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
                 <div class="flex items-center space-x-3">
@@ -215,26 +262,37 @@
                     <button onclick="clearChatHistoryServer()" class="text-xs text-slate-400 hover:text-rose-600 flex items-center space-x-1 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 hover:border-rose-200 transition-all">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    <span>清空对话历史</span>
-                </button>
+                        </svg>
+                        <span>清空对话历史</span>
+                    </button>
                 </div>
             </div>
 
-            <div id="chat-messages-container" class="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-6">
-                <div class="flex items-start space-x-3 max-w-[85%]">
-                    <div class="w-8 h-8 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
-                    <div class="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-800 leading-relaxed">
+            <div id="chat-messages-container" class="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-4">
+                <div class="flex items-start space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                    <div class="ai-bubble">
                         您好！我是您的专属旅游智能助手。我已经全面学习了智库中存储的所有旅游文档。您可以随时向我提问有关：路线规划、景区门票、避坑指南等话题！
                     </div>
                 </div>
             </div>
 
+            <!-- 优化后的输入区域 -->
             <div class="p-4 bg-white border-t border-slate-100 shrink-0">
-                <form id="chat-form" class="flex items-center space-x-2 relative" onsubmit="handleSendMessage(event)">
-                    <input type="text" id="chat-input" autocomplete="off" placeholder="输入您想了解的旅游问题..." class="flex-1 bg-slate-50 border border-slate-200 focus:border-klein focus:bg-white rounded-xl py-3 pl-4 pr-12 text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden transition-all duration-150" />
-                    <button type="submit" id="btn-send-message" class="absolute right-2 p-2 rounded-lg bg-klein text-white hover:bg-klein-dark active:scale-95 transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transform rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <form id="chat-form" class="flex items-center gap-3" onsubmit="handleSendMessage(event)">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        autocomplete="off"
+                        placeholder="输入您想了解的旅游问题..."
+                        class="flex-1 bg-slate-50 border border-slate-200 focus:border-klein focus:bg-white rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-150 min-w-0"
+                    />
+                    <button
+                        type="submit"
+                        id="btn-send-message"
+                        class="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-klein text-white hover:bg-klein-dark active:scale-95 transition-all duration-200 shadow-md shadow-klein/20"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-7-9-7M12 19v-11" />
                         </svg>
                     </button>
@@ -249,7 +307,9 @@
     </footer>
 
     <script>
-        // 1. 会话 ID 持久化维护机制
+        // ==================== 全局变量和初始化 ====================
+
+        // 会话ID管理
         let sessionId = localStorage.getItem('RAG_CHAT_SESSION_ID');
         if (!sessionId) {
             sessionId = 'session_' + Math.random().toString(36).substring(2, 11);
@@ -257,7 +317,7 @@
         }
         document.getElementById('session-label').textContent = `会话标识: ${sessionId}`;
 
-        // 2. SPA 视窗流切换控制器
+        // 视图切换
         function switchView(viewName) {
             const views = ['home', 'upload', 'chat'];
             views.forEach(v => {
@@ -275,20 +335,19 @@
             } else {
                 navBtn.classList.remove('hidden');
                 if (viewName === 'chat') {
-                    // 切换到问答界面时自动加载历史数据库记录
                     loadChatHistoryFromServer();
                 }
             }
         }
 
-        /* ==================== 接口交互：文档解析与状态轮询模块 (import_server.py) ==================== */
+        // ==================== 文件上传模块 ====================
+
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const fileDetails = document.getElementById('file-details');
         const fileNameEl = document.getElementById('file-name');
         const btnRemoveFile = document.getElementById('btn-remove-file');
         const btnUpload = document.getElementById('btn-upload');
-
         const statusPanel = document.getElementById('status-panel');
         const taskBadge = document.getElementById('task-badge');
         const displayTaskId = document.getElementById('display-task-id');
@@ -299,8 +358,13 @@
         let pollingTimer = null;
 
         dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-klein', 'bg-klein/[0.02]'); });
-        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-klein', 'bg-klein/[0.02]'); });
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-klein', 'bg-klein/[0.02]');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-klein', 'bg-klein/[0.02]');
+        });
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('border-klein', 'bg-klein/[0.02]');
@@ -314,7 +378,6 @@
             selectedFile = file;
             fileNameEl.textContent = file.name;
             fileDetails.classList.remove('hidden');
-
             btnUpload.disabled = false;
             btnUpload.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
             btnUpload.classList.add('bg-klein', 'text-white', 'hover:bg-klein-dark', 'shadow-md', 'shadow-klein/10');
@@ -429,28 +492,23 @@
             }
         }
 
+        // ==================== 聊天模块 ====================
 
-        /* ==================== 【全新重构】智能客服问答流模块 (query_server.py) ==================== */
         const chatForm = document.getElementById('chat-form');
         const chatInput = document.getElementById('chat-input');
         const chatMessagesContainer = document.getElementById('chat-messages-container');
         const streamToggle = document.getElementById('stream-toggle');
-
-        // 流式状态下的增量文本缓存变量
         let streamTextBuffer = {};
 
-        // 异步拉取并恢复后端的历史会话
+        // 加载历史记录
         async function loadChatHistoryFromServer() {
             try {
                 const response = await fetch(`${QUERY_URL}/history/${sessionId}`);
                 if (!response.ok) return;
-                const data = await response.json(); // 获取 HistoryResponse
+                const data = await response.json();
 
                 if (data && data.items && data.items.length > 0) {
-                    // 重置画布并保留系统欢迎语
                     initChatUIContainer();
-
-                    // 后端传出的历史通常为最新记录靠前，使用 slice().reverse() 保证时间线正序上屏
                     data.items.slice().reverse().forEach(item => {
                         const sender = (item.role === 'user' || item.role === 'human') ? 'user' : 'ai';
                         appendMessageBubble(sender, item.text, item.image_urls);
@@ -461,7 +519,7 @@
             }
         }
 
-        // 服务器端物理擦除对话历史
+        // 清空历史记录
         async function clearChatHistoryServer() {
             if (!confirm("您确定要物理清空当前会话的全部历史记录吗？此操作不可逆。")) return;
             try {
@@ -476,9 +534,9 @@
 
         function initChatUIContainer() {
             chatMessagesContainer.innerHTML = `
-                <div class="flex items-start space-x-3 max-w-[85%]">
-                    <div class="w-8 h-8 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
-                    <div class="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-800 leading-relaxed">
+                <div class="flex items-start space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                    <div class="ai-bubble">
                         对话历史已成功重置，您可以开始全新的智库提问。
                     </div>
                 </div>
@@ -486,40 +544,42 @@
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
 
-        // 核心表单发送控制函数
+        // 核心消息处理函数
         async function handleSendMessage(event) {
             event.preventDefault();
             const messageText = chatInput.value.trim();
             if (!messageText) return;
 
-            // 1. 用户泡泡直接渲染
+            // 添加用户消息
             appendMessageBubble('user', messageText);
             chatInput.value = '';
 
-            // 2. 预判流式状态开关
             const isStreamMode = streamToggle ? streamToggle.checked : true;
             const aiBubbleId = 'ai-bubble-' + Date.now();
 
             if (isStreamMode) {
-                /* ==================== 分支 A: SSE 流式接收架构 ==================== */
-                // 渲染带有骨架闪烁的 Loading 气泡
-                appendLoadingBubble(aiBubbleId, "Agent 正在调用图链检索知识库...");
+                // ==================== 流式模式 ====================
+                appendStreamingBubble(aiBubbleId, "正在思考中...");
 
                 let eventSource = null;
-                let rawAnswerText = ""; // 用于累加流式文本
+                let rawAnswerText = "";
 
                 try {
-                    // 1. 建立长连接通道监听器
+                    // 先建立SSE连接
                     eventSource = new EventSource(`${QUERY_URL}/stream/${sessionId}`);
 
-                    // 【修改点 1】：监听增量文本事件（对应后端的持续产出）
-                    eventSource.addEventListener('delta', function (e) {
+                    // 监听连接打开
+                    eventSource.onopen = function() {
+                        console.log("SSE连接已建立");
+                    };
+
+                    // 监听增量更新
+                    eventSource.addEventListener('delta', function(e) {
                         try {
                             const data = JSON.parse(e.data);
                             const deltaText = data.delta || "";
                             if (deltaText) {
                                 rawAnswerText += deltaText;
-                                // 实时更新增量气泡
                                 updateStreamingBubble(aiBubbleId, rawAnswerText, true);
                             }
                         } catch (err) {
@@ -527,33 +587,36 @@
                         }
                     });
 
-                    // 【修改点 2】：监听最终完成事件（对应后端的 SSEEvent.FINAL）
-                    // 注意：请确认你后端定义的 SSEEvent.FINAL 字符串是大写 'FINAL' 还是小写 'final'，这里以小写 'final' 为例
-                    eventSource.addEventListener('final', function (e) {
+                    // 监听完成事件
+                    eventSource.addEventListener('final', function(e) {
                         try {
                             const data = JSON.parse(e.data);
-                            // 关闭连接
                             eventSource.close();
 
-                            // 最终包渲染全量文本和多媒体图片
                             const finalText = data.answer || rawAnswerText || "处理完毕";
                             updateStreamingBubble(aiBubbleId, finalText, false, data.image_urls || []);
+                            console.log("流式输出完成");
                         } catch (err) {
                             console.error("解析流式 final 失败:", err);
                             eventSource.close();
                         }
                     });
 
-                    // 【修改点 3】：监听异常事件
-                    eventSource.addEventListener('error', function (e) {
-                        // SSE 经常在断开时触发 error，如果已经拿到结果了可以忽略，否则提示错误
-                        if (rawAnswerText === "") {
-                            updateStreamingBubble(aiBubbleId, "❌ 连接流式服务器失败或已被中断", false);
+                    // 监听错误事件
+                    eventSource.addEventListener('error', function(e) {
+                        console.error("SSE错误:", e);
+
+                        if (eventSource.readyState === EventSource.CLOSED) {
+                            if (rawAnswerText) {
+                                updateStreamingBubble(aiBubbleId, rawAnswerText, false);
+                            } else {
+                                updateStreamingBubble(aiBubbleId, "❌ 连接流式服务器失败，请检查后端服务是否正常运行", false);
+                            }
+                            eventSource.close();
                         }
-                        eventSource.close();
                     });
 
-                    // 2. 建立完连接监听后，再通过 POST 请求通知后端开始执行 Graph 任务
+                    // SSE连接建立后，再发送查询请求
                     const response = await fetch(`${QUERY_URL}/query`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -569,14 +632,13 @@
                     console.log("异步任务已成功启动:", result.message);
 
                 } catch (error) {
-                    console.error(error);
+                    console.error("流式通信错误:", error);
                     if (eventSource) eventSource.close();
                     updateStreamingBubble(aiBubbleId, `❌ 流式通信阻断: ${error.message}`, false);
                 }
-
             } else {
-                /* ==================== 分支 B: 同步死等普通架构 ==================== */
-                appendLoadingBubble(aiBubbleId, "Agent 正在深度整合全量知识，请稍候...");
+                // ==================== 非流式模式 ====================
+                appendLoadingBubble(aiBubbleId, "正在深度整合全量知识，请稍候...");
 
                 try {
                     const response = await fetch(`${QUERY_URL}/query`, {
@@ -590,70 +652,72 @@
                     });
 
                     if (!response.ok) throw new Error(`HTTP 异常状态码: ${response.status}`);
-                    const result = await response.json(); // 解析 QueryNotStreamResponse
+                    const result = await response.json();
 
                     if (result && result.answer) {
-                        // 一把将全量内容以及多媒体图片渲染至画布上
                         updateStreamingBubble(aiBubbleId, result.answer, false, result.image_urls);
                     } else {
                         updateStreamingBubble(aiBubbleId, "未获取到有效回答内容。", false);
                     }
                 } catch (error) {
-                    console.error(error);
+                    console.error("同步通信错误:", error);
                     updateStreamingBubble(aiBubbleId, `❌ 同步通信阻断: ${error.message}`, false);
                 }
             }
         }
 
-        /* ==================== UI 动态渲染辅助类工具函数 ==================== */
+        // ==================== UI 辅助函数 ====================
 
-        // 追加带 Loading 动效的 AI 骨架框
-        function appendLoadingBubble(bubbleId, tipText) {
+        // 添加流式气泡（加载状态）
+        function appendStreamingBubble(bubbleId, tipText) {
             const wrapper = document.createElement('div');
             wrapper.id = bubbleId;
-            wrapper.className = 'flex items-start space-x-3 max-w-[85%]';
+            wrapper.className = 'flex items-start space-x-2';
             wrapper.innerHTML = `
-                <div class="w-8 h-8 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
-                <div class="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-400 flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                <div class="ai-bubble text-slate-400">
                     <span class="text-xs">${tipText}</span>
-                    <div class="flex space-x-1">
-                        <div class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-                        <div class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-                        <div class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-                    </div>
+                    <span class="inline-flex ml-1">
+                        <span class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce mx-0.5" style="animation-delay: 150ms"></span>
+                        <span class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                    </span>
                 </div>
             `;
             chatMessagesContainer.appendChild(wrapper);
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
 
-        // 精准刷新/追加流式或同步回复的核心渲染机（含多图布局）
-        function updateStreamingBubble(bubbleId, text, isAppend = false, imageUrls = []) {
+        // 添加加载气泡
+        function appendLoadingBubble(bubbleId, tipText) {
+            appendStreamingBubble(bubbleId, tipText);
+        }
+
+        // 更新流式气泡内容
+        function updateStreamingBubble(bubbleId, text, isStreaming = false, imageUrls = []) {
             const el = document.getElementById(bubbleId);
             if (!el) return;
 
-            // 增量或覆盖逻辑
-            if (isAppend) {
-                streamTextBuffer[bubbleId] = (streamTextBuffer[bubbleId] || "") + text;
-            } else {
-                streamTextBuffer[bubbleId] = text;
-            }
+            streamTextBuffer[bubbleId] = text;
 
-            // 图像多媒体 Grid 生成
+            // 构建图片网格
             let imgGridHtml = '';
             if (imageUrls && imageUrls.length > 0) {
-                imgGridHtml = `<div class="grid grid-cols-2 gap-2 mt-2 max-w-md">`;
+                imgGridHtml = '<div class="grid grid-cols-2 gap-2 mt-3">';
                 imageUrls.forEach(url => {
-                    imgGridHtml += `<img src="${url}" class="rounded-xl max-h-40 object-cover border border-slate-100 shadow-xs hover:scale-[1.01] transition-transform" onerror="this.style.display='none'"/>`;
+                    imgGridHtml += `<img src="${url}" class="rounded-lg max-h-36 object-cover border border-slate-100 shadow-xs" onerror="this.style.display='none'"/>`;
                 });
-                imgGridHtml += `</div>`;
+                imgGridHtml += '</div>';
             }
 
+            // 打字机光标效果（仅流式输出时显示）
+            const cursorClass = isStreaming ? ' cursor-blink' : '';
+
             el.innerHTML = `
-                <div class="w-8 h-8 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
-                <div class="flex flex-col space-y-1">
-                    <div class="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
-                        ${streamTextBuffer[bubbleId]}
+                <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                <div class="flex flex-col">
+                    <div class="ai-bubble${cursorClass}">
+                        ${text}
                     </div>
                     ${imgGridHtml}
                 </div>
@@ -661,33 +725,35 @@
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
 
-        // 标准气泡组件（专用于加载历史快照还原时调用）
+        // 添加普通消息气泡
         function appendMessageBubble(sender, text, imageUrls = []) {
             const wrapper = document.createElement('div');
 
             let imgGridHtml = '';
             if (imageUrls && imageUrls.length > 0) {
-                imgGridHtml = `<div class="grid grid-cols-2 gap-2 mt-2 max-w-md">`;
+                imgGridHtml = '<div class="grid grid-cols-2 gap-2 mt-3">';
                 imageUrls.forEach(url => {
-                    imgGridHtml += `<img src="${url}" class="rounded-xl max-h-40 object-cover border border-slate-100 shadow-xs" onerror="this.style.display='none'"/>`;
+                    imgGridHtml += `<img src="${url}" class="rounded-lg max-h-36 object-cover border border-slate-100 shadow-xs" onerror="this.style.display='none'"/>`;
                 });
-                imgGridHtml += `</div>`;
+                imgGridHtml += '</div>';
             }
 
             if (sender === 'user') {
-                wrapper.className = 'flex items-start space-x-3 max-w-[85%] ml-auto justify-end';
+                // 用户消息 - 紧凑样式，右对齐
+                wrapper.className = 'flex items-start space-x-2 justify-end';
                 wrapper.innerHTML = `
-                    <div class="bg-klein text-white shadow-sm rounded-2xl rounded-tr-none px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    <div class="user-bubble">
                         ${text}
                     </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center text-slate-700 text-xs font-bold shrink-0">我</div>
+                    <div class="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold shrink-0">我</div>
                 `;
             } else {
-                wrapper.className = 'flex items-start space-x-3 max-w-[85%]';
+                // AI消息 - 保持段落格式，左对齐
+                wrapper.className = 'flex items-start space-x-2';
                 wrapper.innerHTML = `
-                    <div class="w-8 h-8 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
-                    <div class="flex flex-col space-y-1">
-                        <div class="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-tl-none px-4 py-3 text-sm text-slate-800 leading-relaxed whitespace-pre-wrap break-words">
+                    <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                    <div class="flex flex-col">
+                        <div class="ai-bubble">
                             ${text}
                         </div>
                         ${imgGridHtml}
@@ -698,6 +764,12 @@
             chatMessagesContainer.appendChild(wrapper);
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
+
+        // 页面加载完成
+        console.log('旅游智能问答智库系统已就绪');
+        console.log('导入服务地址:', IMPORT_URL);
+        console.log('查询服务地址:', QUERY_URL);
+        console.log('当前会话ID:', sessionId);
     </script>
 </body>
 </html>

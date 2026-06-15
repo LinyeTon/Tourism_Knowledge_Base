@@ -49,7 +49,9 @@
 **Step 2: 生成拼接字符串与改写问题**
 基于 Step 1 生成的数据，执行以下操作：
 
--   **`item_name_list`**：创建一个数组，只包含 **一个元素**，即拼接后的长字符串。拼接规则如下：
+-   **`content_type`**:(String): 提取到的核心主题。
+
+-   **`item_names`**：创建一个数组，只包含 **一个元素**，即拼接后的长字符串。拼接规则如下：
     1.  遍历所有字段，仅处理值非空的字段。
     2.  对于非数组类型字段（`content_type`、`region_name`），格式化为 `"字段名: 值"`。
     3.  对于数组类型字段（`scenic_name`、`route_name` 等），先用中文顿号（、）将数组元素拼接，再格式化为 `"字段名: 拼接后的字符串"`。
@@ -58,13 +60,14 @@
 -   **`rewritten_query`**：根据指代消解和意图补全后的结果，生成一个语义完整流畅的提问句。**严格控制在 100 个字符以内**。
 
 # Output Format
-你必须返回一个严格的 JSON 对象，不包含任何 Markdown 代码块标记（如 ```json）或解释性文字。
+你必须返回一个严格的 JSON 对象，只包含**`content_type`**、**`item_names`**、**`rewritten_query`**三个字段，不包含任何 Markdown 代码块标记（如 ```json）或解释性文字。
 
 # Example 1: 简单提取
 **Input**:
 {{"query": "去成都旅游，求推荐好吃的火锅、串串香和担担面", "history_text": ""}}
 **Output**:
 {{
+    "content_type": "美食推荐",
     "item_names": ["content_type: 美食推荐, region_name: 成都, restaurant_name: 火锅、串串香、担担面"],
     "rewritten_query": "去成都旅游，有什么值得推荐的火锅、串串香、担担面等美食吗？"
 }}
@@ -74,6 +77,7 @@
 {{"query": "那它的特色小吃有哪些？", "history_text": "用户：我想去厦门旅游。\n助手：厦门是个好地方，鼓浪屿值得一去。"}}
 **Output**:
 {{
+    "content_type": "美食推荐",
     "item_names": ["content_type: 美食推荐, region_name: 厦门"],
     "rewritten_query": "厦门有哪些特色小吃？"
 }}
@@ -83,6 +87,7 @@
 {{"query": "我查询厦门的住宿", "history_text": "用户：帮我推荐成都的酒店。\n助手：成都的春熙路附近有成都博舍酒店、尼依格罗酒店。"}}
 **Output**:
 {{
+    "content_type": "酒店信息",
     "item_name_list": ["content_type: 酒店信息, region_name: 厦门"],
     "rewritten_query": "查询厦门的住宿有哪些？"
 }}

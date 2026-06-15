@@ -99,6 +99,39 @@ def load_prompt_text(reranker_docs, history, item_names, rewritten_query) -> str
     return prompt_text
 
 
+# def call_llm_generate(answer_prompt_text, state):
+#     """
+#     调用模型生成答案 文本答案
+#     :param answer_prompt_text:
+#     :param state:
+#     :return:
+#     """
+#     final_answer = ""
+#     # 1. 获取模型对象
+#     llm_client = llm_provider.chat()
+#     # 2. 判断是否是流式调用
+#     is_stream = state.get("is_stream", False)
+#     if is_stream:
+#         # 一段一段文本返回
+#         # langchain  init_chat_model()   model  invoke  1 次    stream  1 2 3 4
+#         stream = llm_client.stream(answer_prompt_text)
+#         for chunk in stream:
+#             # 当前段
+#             current_content = chunk.content
+#             push_to_session(
+#                 state.get("session_id") , SSEEvent.DELTA , {"delta":current_content}
+#             )
+#             final_answer += current_content
+#     else:
+#         response = llm_client.invoke(answer_prompt_text)
+#         final_answer = response.content
+#
+#     state['answer'] = final_answer
+
+
+import re
+
+
 def call_llm_generate(answer_prompt_text, state):
     """
     调用模型生成答案 文本答案
@@ -109,23 +142,104 @@ def call_llm_generate(answer_prompt_text, state):
     final_answer = ""
     # 1. 获取模型对象
     llm_client = llm_provider.chat()
+    # --- 新增：提取参考内容中真实的 URL 列表，用于防幻觉校验 ---
+    valid_urls = set()
+    reranked_docs = state.get("reranked_docs", [])
+    for doc in reranked_docs:
+        if doc.get("url"):
+            valid_urls.add(doc["url"])
+    # --- 新增：流式缓冲区与校验逻辑 ---
+    buffer = ""
+    # 匹配 <URL> 的正则
+    url_pattern = re.compile(r'<(https?://[^>]+)>')
+    # 匹配 【图片】 标记的正则
+    image_tag_pattern = re.compile(r'【图片】')
+
+    def process_buffer(is_end=False):
+        """
+        处理缓冲区里的内容，返回安全可输出的文本
+        :param is_end: 是否是流的结尾
+        """
+        nonlocal buffer
+        safe_text = ""
+        # 1. 检查是否包含完整的 <URL>
+        url_matches = list(url_pattern.finditer(buffer))
+        if url_matches:
+            last_end = 0
+            for match in url_matches:
+                # 放行匹配到的 URL 前面的普通文本
+                safe_text += buffer[last_end:match.start()]
+                extracted_url = match.group(1)
+                # 核心校验：如果 URL 在白名单中，放行；否则丢弃（防幻觉）
+                if extracted_url in valid_urls:
+                    safe_text += match.group(0)  # 保留原始的 <URL>
+                # else: 什么都不加，相当于把幻觉 URL 删掉了
+                last_end = match.end()
+            safe_text += buffer[last_end:url_matches[-1].end()]
+            buffer = buffer[url_matches[-1].end():]  # 缓冲区只保留未处理的部分
+        # 2. 检查是否包含完整的 【图片】 标记
+        tag_matches = list(image_tag_pattern.finditer(buffer))
+        if tag_matches:
+            last_end = 0
+            for match in tag_matches:
+                safe_text += buffer[last_end:match.start()]
+                # 如果后面没有任何真实 URL 跟随，【图片】标记也没有意义，直接丢弃
+                # 如果后面跟着的是白名单 URL，在上面一步已经拼接好了，这里也丢弃【图片】标记本身（或者保留，视你的前端需求）
+                # 此处我们选择丢弃【图片】标记，因为前端通常只需要 <img_url>
+                last_end = match.end()
+            safe_text += buffer[last_end:tag_matches[-1].end()]
+            buffer = buffer[tag_matches[-1].end():]
+        # 3. 如果流结束了，强制清空缓冲区（不校验，直接输出残余，或者直接丢弃残余）
+        if is_end:
+            safe_text += buffer
+            buffer = ""
+        # 4. 如果缓冲区还没闭合，但包含了可能形成 URL 的字符，继续缓冲（不输出）
+        #    否则，放行缓冲区内容
+        if not is_end and ('<' in buffer or '【' in buffer):
+            # 把不含敏感字符的部分放行，只保留敏感部分
+            safe_part_len = min(buffer.find('<') if '<' in buffer else len(buffer),
+                                buffer.find('【') if '【' in buffer else len(buffer))
+            if safe_part_len > 0:
+                safe_text += buffer[:safe_part_len]
+                buffer = buffer[safe_part_len:]
+        elif not is_end:
+            # 缓冲区里没有敏感字符，全部放行
+            safe_text += buffer
+            buffer = ""
+        return safe_text
+
     # 2. 判断是否是流式调用
     is_stream = state.get("is_stream", False)
     if is_stream:
-        # 一段一段文本返回
-        # langchain  init_chat_model()   model  invoke  1 次    stream  1 2 3 4
         stream = llm_client.stream(answer_prompt_text)
         for chunk in stream:
-            # 当前段
             current_content = chunk.content
+            # 将新内容加入缓冲区
+            buffer += current_content
+            # 尝试处理缓冲区，获取可安全输出的文本
+            safe_content = process_buffer(is_end=False)
+            if safe_content:
+                push_to_session(
+                    state.get("session_id"), SSEEvent.DELTA, {"delta": safe_content}
+                )
+            final_answer += safe_content
+        # 流结束，刷新缓冲区剩余内容
+        remaining_content = process_buffer(is_end=True)
+        if remaining_content:
             push_to_session(
-                state.get("session_id") , SSEEvent.DELTA , {"delta":current_content}
+                state.get("session_id"), SSEEvent.DELTA, {"delta": remaining_content}
             )
-            final_answer += current_content
+            final_answer += remaining_content
     else:
         response = llm_client.invoke(answer_prompt_text)
+        # 非流式直接一次性校验过滤
         final_answer = response.content
-
+        url_matches = url_pattern.finditer(final_answer)
+        for match in url_matches:
+            if match.group(1) not in valid_urls:
+                final_answer = final_answer.replace(match.group(0), '')
+        # 清理孤立的【图片】标签
+        final_answer = image_tag_pattern.sub('', final_answer)
     state['answer'] = final_answer
 
 

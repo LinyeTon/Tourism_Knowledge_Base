@@ -45,7 +45,7 @@ app.add_middleware(
 @app.get("/html")
 def chat_html():
 
-    chat_html_path_obj = PROJECT_ROOT / "app" / "resources" / "html" / "index2.html"
+    chat_html_path_obj = PROJECT_ROOT / "app" / "resources" / "html" / "index3.html"
 
     return FileResponse(
         path = chat_html_path_obj,
@@ -68,44 +68,98 @@ def stream(session_id,request:Request):
         media_type="text/event-stream"
     )
 
-def invoke_query_graph(session_id:str,query:str,is_stream:bool=False):
-    # 执行 动态测试
+# def invoke_query_graph(session_id:str,query:str,is_stream:bool=False):
+#     # 执行 动态测试
+#     state = create_query_default_state(
+#         session_id=session_id,
+#         original_query=query,
+#         is_stream=is_stream
+#     )
+#     # 创建一个队列 session_id <-- 数据
+#
+#     # 清空task_utils的数据
+#     clear_task(session_id)
+#
+#     if is_stream:
+#         create_sse_queue(session_id)
+#
+#     try:
+#         update_task_status(session_id,TASK_STATUS_PROCESSING,is_stream)
+#         logger.info(f"开始执行,执行参数为:{state}")
+#         result_state = query_graph_app.invoke(state)
+#         logger.info(f"执行结束,执行结果为:{result_state}")
+#         update_task_status(session_id,TASK_STATUS_COMPLETED,is_stream)
+#
+#         if is_stream:
+#             push_to_session(
+#                 session_id,
+#                 SSEEvent.FINAL,  # 显示图片
+#                 {
+#                     "answer": result_state['answer'],
+#                     "status": "completed",
+#                     "image_urls": result_state.get("image_urls",[])
+#                 }
+#             )
+#         # 返回结果! 非流式需要
+#         return result_state
+#     except Exception as e:
+#         update_task_status(session_id,TASK_STATUS_FAILED,is_stream)
+#         push_to_session(session_id,SSEEvent.ERROR,{"error":str(e)})
+#         logger.exception(f"{session_id}执行出现了异常!!")
+
+def invoke_query_graph(session_id: str, query: str, is_stream: bool = False):
     state = create_query_default_state(
         session_id=session_id,
         original_query=query,
         is_stream=is_stream
     )
-    # 创建一个队列 session_id <-- 数据
 
-    # 清空task_utils的数据
     clear_task(session_id)
 
     if is_stream:
         create_sse_queue(session_id)
 
     try:
-        update_task_status(session_id,TASK_STATUS_PROCESSING,is_stream)
+        update_task_status(session_id, TASK_STATUS_PROCESSING, is_stream)
         logger.info(f"开始执行,执行参数为:{state}")
-        result_state = query_graph_app.invoke(state)
-        logger.info(f"执行结束,执行结果为:{result_state}")
-        update_task_status(session_id,TASK_STATUS_COMPLETED,is_stream)
 
+        # 如果是流式模式，可以在这里添加中间状态推送
         if is_stream:
             push_to_session(
                 session_id,
-                SSEEvent.FINAL,  # 显示图片
+                SSEEvent.DELTA,
+                {
+                    "delta": "正在分析您的问题...\n",
+                    "status": "processing"
+                }
+            )
+
+        result_state = query_graph_app.invoke(state)
+        logger.info(f"执行结束,执行结果为:{result_state}")
+        update_task_status(session_id, TASK_STATUS_COMPLETED, is_stream)
+
+        if is_stream:
+            # 如果需要在Graph执行过程中发送增量更新，需要在Graph节点中调用push_to_session
+            # 这里只是一个示例
+            push_to_session(
+                session_id,
+                SSEEvent.FINAL,
                 {
                     "answer": result_state['answer'],
                     "status": "completed",
-                    "image_urls": result_state.get("image_urls",[])
+                    "image_urls": result_state.get("image_urls", [])
                 }
             )
-        # 返回结果! 非流式需要
+
         return result_state
     except Exception as e:
-        update_task_status(session_id,TASK_STATUS_FAILED,is_stream)
-        push_to_session(session_id,SSEEvent.ERROR,{"error":str(e)})
+        update_task_status(session_id, TASK_STATUS_FAILED, is_stream)
+        if is_stream:
+            push_to_session(session_id, SSEEvent.ERROR, {"error": str(e)})
         logger.exception(f"{session_id}执行出现了异常!!")
+
+
+
 
 
 # 4. 查询和提问接口

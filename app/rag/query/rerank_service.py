@@ -136,7 +136,7 @@ def reranker_score_pair_list(question_answer_pair_list):
     """
     reranker_model = llm_provider.reranker_model()
     # normalize=True 归一化 将分值拉倒 0 -1之间!方便进行后续算法统计!!
-    score_list =  reranker_model.compute_score(question_answer_pair_list,normalize=True)
+    score_list =  reranker_model.compute_score(question_answer_pair_list,max_length=512,normalize=True)
     logger.info(f"完成对数据:{question_answer_pair_list}的打分,分数为:{score_list}")
     return score_list
 

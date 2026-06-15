@@ -29,7 +29,7 @@ query_graph_builder.set_entry_point("node_item_name_confirm")
 def node_item_name_confirm_after(state:QueryGraphState) :
     if state.get("answer"):
         # 有值
-        logger.info(f"本次没有明确的item_name,提前结束,待用户确定! {state.get('answer')}")
+        logger.info(f"本次没有明确的item_names,提前结束,待用户确定! {state.get('answer')}")
         return "node_answer_output"
     else:
         # 没有
