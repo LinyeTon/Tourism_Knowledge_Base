@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅游智能问答智库系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        klein: {
+                            DEFAULT: '#002FA7',
+                            light: '#1A4FFF',
+                            dark: '#002280',
+                            bg: '#F4F7FF',
+                        }
+                    },
+                    boxShadow: {
+                        'elegant': '0 10px 30px -5px rgba(0, 47, 167, 0.08), 0 4px 12px -5px rgba(0, 0, 0, 0.03)',
+                        'elegant-hover': '0 20px 40px -5px rgba(0, 47, 167, 0.15), 0 8px 20px -5px rgba(0, 47, 167, 0.05)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #F8FAFC;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+        /* 打字机光标动画 */
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        .cursor-blink::after {
+            content: '▋';
+            animation: blink 1s infinite;
+            color: #002FA7;
+            font-weight: bold;
+        }
+
+        /* 用户消息气泡样式 - 紧凑 */
+        .user-bubble {
+            background-color: #002FA7;
+            color: white;
+            border-radius: 12px 12px 4px 12px;
+            padding: 8px 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 400px;
+        }
+
+        /* AI消息气泡样式 - 保持段落格式 */
+        .ai-bubble {
+            background-color: white;
+            border: 1px solid #f1f5f9;
+            border-radius: 12px 12px 12px 4px;
+            padding: 12px 16px;
+            font-size: 14px;
+            line-height: 1.7;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+
+        /* AI消息中的段落间距 */
+        .ai-bubble p {
+            margin-bottom: 8px;
+        }
+
+        .ai-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        	.glass-btn {
+	    background: rgba(0, 47, 167, 0.15);
+	    backdrop-filter: blur(12px);
+	    border: 1px solid rgba(255, 255, 255, 0.2);
+	    box-shadow: inset 0 1px 1px rgba(255,255,255,0.3), 0 4px 15px rgba(0, 0, 0, 0.1);
+	    position: relative;
+	    overflow: hidden;
+	}
+	/* 鼠标悬停时的内部高光流动 */
+	.glass-btn::before {
+	    content: '';
+	    position: absolute;
+	    top: -50%;
+	    left: -50%;
+	    width: 200%;
+	    height: 200%;
+	    background: conic-gradient(from 0deg, transparent, rgba(0, 47, 167, 0.4), transparent 40%);
+	    opacity: 0;
+	    transition: opacity 0.5s;
+	    animation: rotate-light 4s linear infinite;
+	}
+	.glass-btn:hover::before { opacity: 1; }
+	.glass-btn:hover { border-color: rgba(0, 47, 167, 0.5); box-shadow: 0 0 20px rgba(0, 47, 167, 0.3); transform: translateY(-2px); }
+	@keyframes rotate-light { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col selection:bg-klein selection:text-white">
+
+    <script>
+        // 后端接口配置
+        const IMPORT_URL = 'http://127.0.0.1:8000';
+        const QUERY_URL = 'http://127.0.0.1:8001';
+    </script>
+
+    <header class="bg-white border-b border-slate-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('home')">
+                <div class="w-9 h-9 rounded-xl bg-klein flex items-center justify-center text-white shadow-md shadow-klein/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                </div>
+                <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-klein to-klein-light bg-clip-text text-transparent">旅游智能问答智库</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="switchView('home')" id="nav-home-btn" class="px-4 py-2 rounded-lg text-sm font-medium text-klein bg-klein/5 hidden">返回首页</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col justify-center max-w-7xl w-full mx-auto px-6 py-8 relative">
+
+        <!-- 首页视图 -->
+        <div id="view-home" class="w-full max-w-4xl mx-auto space-y-12">
+            <div class="text-center space-y-4">
+                <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+                    欢迎使用 <span class="text-klein">旅游智能知识管理系统</span>
+                </h1>
+                <p class="text-lg text-slate-500 max-w-xl mx-auto font-light">
+                    基于 LangGraph 高级多代理解析架构与 RAG 检索增强技术，为您打造高效、精准的数字化旅游问答智库。
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-6">
+                <div onclick="switchView('upload')" class="group bg-white rounded-3xl border border-slate-100 p-8 flex flex-col items-start justify-between cursor-pointer shadow-elegant hover:shadow-elegant-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-klein/5 rounded-full blur-3xl group-hover:bg-klein/10 transition-colors"></div>
+                    <div class="w-14 h-14 rounded-2xl bg-klein/5 flex items-center justify-center text-klein mb-8 group-hover:bg-klein group-hover:text-white transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2 flex items-center">
+                            知识库构建
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </h3>
+                        <p class="text-sm text-slate-500 leading-relaxed font-light">
+                            自由上传旅游攻略、景区介绍、酒店政策等文档。系统将在后台自动进行原子级切片、解析并高效向量化存入本地知识库。
+                        </p>
+                    </div>
+                </div>
+
+                <div onclick="switchView('chat')" class="group bg-white rounded-3xl border border-slate-100 p-8 flex flex-col items-start justify-between cursor-pointer shadow-elegant hover:shadow-elegant-hover hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-klein/5 rounded-full blur-3xl group-hover:bg-klein/10 transition-colors"></div>
+                    <div class="w-14 h-14 rounded-2xl bg-klein/5 flex items-center justify-center text-klein mb-8 group-hover:bg-klein group-hover:text-white transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2 flex items-center">
+                            智能客服查询
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </h3>
+                        <p class="text-sm text-slate-500 leading-relaxed font-light">
+                            开启专属的旅游智能AI向导。支持模糊检索与知识关联，针对旅游线路规划、费用详情、避坑指南等提供专业级回复。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 上传视图 -->
+        <div id="view-upload" class="w-full max-w-2xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-elegant p-8 hidden">
+            <div class="flex items-center space-x-3 mb-6">
+                <button onclick="switchView('home')" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">构建旅游知识库</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">上传文档建立或扩充智能客服的专属检索域</p>
+                </div>
+            </div>
+
+            <div id="drop-zone" class="border-2 border-dashed border-slate-200 hover:border-klein bg-slate-50/50 hover:bg-klein/[0.01] rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer transition-all duration-200 group">
+                <input type="file" id="file-input" class="hidden" accept=".pdf,.doc,.docx,.txt,.md,.html" />
+                <div class="w-12 h-12 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-klein transition-colors mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <p class="text-sm font-medium text-slate-700">点击选择文件 或 将文件拖拽到此处</p>
+                <p class="text-xs text-slate-400 mt-1.5">支持 PDF, DOCX, TXT, MD, HTML 等常见格式</p>
+            </div>
+
+            <div id="file-details" class="mt-4 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 flex items-center justify-between hidden">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-klein shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span id="file-name" class="text-sm font-medium text-slate-700 truncate">filename.pdf</span>
+                </div>
+                <button id="btn-remove-file" class="text-xs text-rose-500 hover:underline font-medium">移除</button>
+            </div>
+
+            <button id="btn-upload" disabled class="w-full mt-6 py-3 px-4 bg-slate-200 text-slate-400 font-medium rounded-xl transition-all duration-200 cursor-not-allowed">
+                开始解析并存入知识库
+            </button>
+
+            <div id="status-panel" class="mt-8 pt-6 border-t border-slate-100 hidden space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold tracking-wider text-slate-400 uppercase">后台图链解析执行状态</span>
+                    <span id="task-badge" class="px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-600">队列中</span>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-4 space-y-3">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500">任务标识 (Task ID):</span>
+                        <span id="display-task-id" class="font-mono text-slate-700 font-medium">--</span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500">Agent 当前解析阶段:</span>
+                        <span id="display-task-stage" class="text-slate-700 font-medium">准备上传...</span>
+                    </div>
+                </div>
+
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div id="status-progress-bar" class="bg-klein h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天视图 -->
+        <div id="view-chat" class="w-full max-w-4xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-elegant flex flex-col h-[75vh] hidden overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                <div class="flex items-center space-x-3">
+                    <button onclick="switchView('home')" class="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-base font-bold text-slate-900">旅游智能AI客服</h2>
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        </div>
+                        <p class="text-xs text-slate-400" id="session-label">正在同步 Session 状态...</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <label class="relative inline-flex items-center cursor-pointer select-none">
+                        <input type="checkbox" id="stream-toggle" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-klein"></div>
+                        <span class="ml-2 text-xs font-semibold text-slate-500 peer-checked:text-slate-800">开启流式输出 (SSE)</span>
+                    </label>
+
+                    <button onclick="clearChatHistoryServer()" class="text-xs text-slate-400 hover:text-rose-600 flex items-center space-x-1 border border-slate-200 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 hover:border-rose-200 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>清空对话历史</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chat-messages-container" class="flex-1 overflow-y-auto p-6 bg-slate-50/50 space-y-4">
+                <div class="flex items-start space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                    <div class="ai-bubble">
+                        您好！我是您的专属旅游智能助手。我已经全面学习了智库中存储的所有旅游文档。您可以随时向我提问有关：路线规划、景区门票、避坑指南等话题！
+                    </div>
+                </div>
+            </div>
+
+            <!-- 优化后的输入区域 -->
+            <div class="p-4 bg-white border-t border-slate-100 shrink-0">
+                <form id="chat-form" class="flex items-center gap-3" onsubmit="handleSendMessage(event)">
+                    <input
+                        type="text"
+                        id="chat-input"
+                        autocomplete="off"
+                        placeholder="输入您想了解的旅游问题..."
+                        class="flex-1 bg-slate-50 border border-slate-200 focus:border-klein focus:bg-white rounded-xl py-2.5 px-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none transition-all duration-150 min-w-0"
+                    />
+                  <button type="submit" id="btn-send-message"
+                          class="glass-btn flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl text-klein transition-all duration-300 active:scale-90">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 translate-x-[1px] relative z-10" fill="none"
+                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                    </svg>
+                  </button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-100 py-4 text-center shrink-0">
+        <p class="text-xs text-slate-400 font-light">Powered by FastAPI & LangGraph RAG Agent System Framework</p>
+    </footer>
+
+    <script>
+        // ==================== 全局变量和初始化 ====================
+
+        // 会话ID管理
+        let sessionId = localStorage.getItem('RAG_CHAT_SESSION_ID');
+        if (!sessionId) {
+            sessionId = 'session_' + Math.random().toString(36).substring(2, 11);
+            localStorage.setItem('RAG_CHAT_SESSION_ID', sessionId);
+        }
+        document.getElementById('session-label').textContent = `会话标识: ${sessionId}`;
+
+        // 视图切换
+        function switchView(viewName) {
+            const views = ['home', 'upload', 'chat'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (v === viewName) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            const navBtn = document.getElementById('nav-home-btn');
+            if (viewName === 'home') {
+                navBtn.classList.add('hidden');
+            } else {
+                navBtn.classList.remove('hidden');
+                if (viewName === 'chat') {
+                    loadChatHistoryFromServer();
+                }
+            }
+        }
+
+        // ==================== 文件上传模块 ====================
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileDetails = document.getElementById('file-details');
+        const fileNameEl = document.getElementById('file-name');
+        const btnRemoveFile = document.getElementById('btn-remove-file');
+        const btnUpload = document.getElementById('btn-upload');
+        const statusPanel = document.getElementById('status-panel');
+        const taskBadge = document.getElementById('task-badge');
+        const displayTaskId = document.getElementById('display-task-id');
+        const displayTaskStage = document.getElementById('display-task-stage');
+        const progressBar = document.getElementById('status-progress-bar');
+
+        let selectedFile = null;
+        let pollingTimer = null;
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-klein', 'bg-klein/[0.02]');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-klein', 'bg-klein/[0.02]');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-klein', 'bg-klein/[0.02]');
+            if (e.dataTransfer.files.length > 0) handleFileSelection(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFileSelection(e.target.files[0]);
+        });
+
+        function handleFileSelection(file) {
+            selectedFile = file;
+            fileNameEl.textContent = file.name;
+            fileDetails.classList.remove('hidden');
+            btnUpload.disabled = false;
+            btnUpload.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+            btnUpload.classList.add('bg-klein', 'text-white', 'hover:bg-klein-dark', 'shadow-md', 'shadow-klein/10');
+        }
+
+        btnRemoveFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetUploadState();
+        });
+
+        function resetUploadState() {
+            selectedFile = null;
+            fileInput.value = '';
+            fileDetails.classList.add('hidden');
+            btnUpload.disabled = true;
+            btnUpload.classList.remove('bg-klein', 'text-white', 'hover:bg-klein-dark', 'shadow-md', 'shadow-klein/10');
+            btnUpload.classList.add('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+            statusPanel.classList.add('hidden');
+            if (pollingTimer) clearInterval(pollingTimer);
+        }
+
+        btnUpload.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            btnUpload.disabled = true;
+            btnUpload.textContent = '正在上传数据至存储目录...';
+            statusPanel.classList.remove('hidden');
+            updateUIStatus('uploading', '正在建立本地 Task ID 并分块写入...');
+
+            const formData = new FormData();
+            formData.append('files', selectedFile);
+
+            try {
+                const response = await fetch(`${IMPORT_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('服务器无响应，请确认跨域CORS或服务状态');
+                const result = await response.json();
+
+                if (result.task_ids && result.task_ids.length > 0) {
+                    const taskId = result.task_ids[0];
+                    displayTaskId.textContent = taskId;
+                    btnUpload.textContent = '上送成功，Agent图链解析中...';
+                    startPollingStatus(taskId);
+                } else {
+                    throw new Error(result.message || '上传处理异常');
+                }
+            } catch (error) {
+                console.error(error);
+                updateUIStatus('failed', `链路中断: ${error.message}`);
+                btnUpload.textContent = '重试解析构建';
+                btnUpload.disabled = false;
+            }
+        });
+
+        function startPollingStatus(taskId) {
+            if (pollingTimer) clearInterval(pollingTimer);
+
+            pollingTimer = setInterval(async () => {
+                try {
+                    const response = await fetch(`${IMPORT_URL}/status/${taskId}`);
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const status = data.status;
+
+                    if (status === 'processing') {
+                        let stageMsg = 'LangGraph 决策流调用中';
+                        if (data.running_list && data.running_list.length > 0) {
+                            stageMsg += ` [运行节点: ${data.running_list.join(', ')}]`;
+                        }
+                        updateUIStatus('processing', stageMsg);
+                    } else if (status === 'completed') {
+                        updateUIStatus('completed', '多代理解析完成，数据已向量化落库！');
+                        clearInterval(pollingTimer);
+                        btnUpload.textContent = '构建成功';
+                    } else if (status === 'failed') {
+                        updateUIStatus('failed', '全流程后台测试运行失败，多代理图抛出异常');
+                        clearInterval(pollingTimer);
+                        btnUpload.textContent = '重新提交解析';
+                        btnUpload.disabled = false;
+                    }
+                } catch (e) {
+                    console.error('状态同步轮询异常:', e);
+                }
+            }, 2000);
+        }
+
+        function updateUIStatus(type, message) {
+            displayTaskStage.textContent = message;
+            if (type === 'uploading') {
+                taskBadge.className = 'px-2.5 py-0.5 text-xs font-medium rounded-full bg-amber-50 text-amber-600';
+                taskBadge.textContent = '传输中';
+                progressBar.style.width = '25%';
+                progressBar.className = 'bg-amber-500 h-full transition-all duration-500';
+            } else if (type === 'processing') {
+                taskBadge.className = 'px-2.5 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-600';
+                taskBadge.textContent = '多代理执行中';
+                progressBar.style.width = '65%';
+                progressBar.className = 'bg-klein h-full transition-all duration-500';
+            } else if (type === 'completed') {
+                taskBadge.className = 'px-2.5 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-600';
+                taskBadge.textContent = '同步成功';
+                progressBar.style.width = '100%';
+                progressBar.className = 'bg-emerald-500 h-full transition-all duration-500';
+            } else if (type === 'failed') {
+                taskBadge.className = 'px-2.5 py-0.5 text-xs font-medium rounded-full bg-rose-50 text-rose-600';
+                taskBadge.textContent = '解析终止';
+                progressBar.style.width = '100%';
+                progressBar.className = 'bg-rose-500 h-full transition-all duration-500';
+            }
+        }
+
+        // ==================== 聊天模块 ====================
+
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessagesContainer = document.getElementById('chat-messages-container');
+        const streamToggle = document.getElementById('stream-toggle');
+        let streamTextBuffer = {};
+
+        // 加载历史记录
+        async function loadChatHistoryFromServer() {
+            try {
+                const response = await fetch(`${QUERY_URL}/history/${sessionId}`);
+                if (!response.ok) return;
+                const data = await response.json();
+
+                if (data && data.items && data.items.length > 0) {
+                    initChatUIContainer();
+                    data.items.slice().reverse().forEach(item => {
+                        const sender = (item.role === 'user' || item.role === 'human') ? 'user' : 'ai';
+                        appendMessageBubble(sender, item.text, item.image_urls);
+                    });
+                }
+            } catch (err) {
+                console.error("同步历史记录失败:", err);
+            }
+        }
+
+        // 清空历史记录
+        async function clearChatHistoryServer() {
+            if (!confirm("您确定要物理清空当前会话的全部历史记录吗？此操作不可逆。")) return;
+            try {
+                const res = await fetch(`${QUERY_URL}/history/${sessionId}`, { method: 'DELETE' });
+                const result = await res.json();
+                alert(result.message || "清空成功");
+                initChatUIContainer();
+            } catch (err) {
+                alert("清理历史失败，请检查后端状态。");
+            }
+        }
+
+        function initChatUIContainer() {
+            chatMessagesContainer.innerHTML = `
+                <div class="flex items-start space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                    <div class="ai-bubble">
+                        对话历史已成功重置，您可以开始全新的智库提问。
+                    </div>
+                </div>
+            `;
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        // 核心消息处理函数
+        async function handleSendMessage(event) {
+            event.preventDefault();
+            const messageText = chatInput.value.trim();
+            if (!messageText) return;
+
+            // 添加用户消息
+            appendMessageBubble('user', messageText);
+            chatInput.value = '';
+
+            const isStreamMode = streamToggle ? streamToggle.checked : true;
+            const aiBubbleId = 'ai-bubble-' + Date.now();
+
+            if (isStreamMode) {
+                // ==================== 流式模式 ====================
+                appendStreamingBubble(aiBubbleId, "正在思考中...");
+
+                let eventSource = null;
+                let rawAnswerText = "";
+
+                try {
+                    // 先建立SSE连接
+                    eventSource = new EventSource(`${QUERY_URL}/stream/${sessionId}`);
+
+                    // 监听连接打开
+                    eventSource.onopen = function() {
+                        console.log("SSE连接已建立");
+                    };
+
+                    // 监听增量更新
+                    eventSource.addEventListener('delta', function(e) {
+                        try {
+                            const data = JSON.parse(e.data);
+                            const deltaText = data.delta || "";
+                            if (deltaText) {
+                                rawAnswerText += deltaText;
+                                updateStreamingBubble(aiBubbleId, rawAnswerText, true);
+                            }
+                        } catch (err) {
+                            console.error("解析流式 delta 失败:", err);
+                        }
+                    });
+
+                    // 监听完成事件
+                    eventSource.addEventListener('final', function(e) {
+                        try {
+                            const data = JSON.parse(e.data);
+                            eventSource.close();
+
+                            const finalText = data.answer || rawAnswerText || "处理完毕";
+                            updateStreamingBubble(aiBubbleId, finalText, false, data.image_urls || []);
+                            console.log("流式输出完成");
+                        } catch (err) {
+                            console.error("解析流式 final 失败:", err);
+                            eventSource.close();
+                        }
+                    });
+
+                    // 监听错误事件
+                    eventSource.addEventListener('error', function(e) {
+                        console.error("SSE错误:", e);
+
+                        if (eventSource.readyState === EventSource.CLOSED) {
+                            if (rawAnswerText) {
+                                updateStreamingBubble(aiBubbleId, rawAnswerText, false);
+                            } else {
+                                updateStreamingBubble(aiBubbleId, "❌ 连接流式服务器失败，请检查后端服务是否正常运行", false);
+                            }
+                            eventSource.close();
+                        }
+                    });
+
+                    // SSE连接建立后，再发送查询请求
+                    const response = await fetch(`${QUERY_URL}/query`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            query: messageText,
+                            session_id: sessionId,
+                            is_stream: true
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP 异常状态码: ${response.status}`);
+                    const result = await response.json();
+                    console.log("异步任务已成功启动:", result.message);
+
+                } catch (error) {
+                    console.error("流式通信错误:", error);
+                    if (eventSource) eventSource.close();
+                    updateStreamingBubble(aiBubbleId, `❌ 流式通信阻断: ${error.message}`, false);
+                }
+            } else {
+                // ==================== 非流式模式 ====================
+                appendLoadingBubble(aiBubbleId, "正在深度整合全量知识，请稍候...");
+
+                try {
+                    const response = await fetch(`${QUERY_URL}/query`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            session_id: sessionId,
+                            query: messageText,
+                            is_stream: false
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP 异常状态码: ${response.status}`);
+                    const result = await response.json();
+
+                    if (result && result.answer) {
+                        updateStreamingBubble(aiBubbleId, result.answer, false, result.image_urls);
+                    } else {
+                        updateStreamingBubble(aiBubbleId, "未获取到有效回答内容。", false);
+                    }
+                } catch (error) {
+                    console.error("同步通信错误:", error);
+                    updateStreamingBubble(aiBubbleId, `❌ 同步通信阻断: ${error.message}`, false);
+                }
+            }
+        }
+
+        // ==================== UI 辅助函数 ====================
+
+        // 添加流式气泡（加载状态）
+        function appendStreamingBubble(bubbleId, tipText) {
+            const wrapper = document.createElement('div');
+            wrapper.id = bubbleId;
+            wrapper.className = 'flex items-start space-x-2';
+            wrapper.innerHTML = `
+                <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                <div class="ai-bubble text-slate-400">
+                    <span class="text-xs">${tipText}</span>
+                    <span class="inline-flex ml-1">
+                        <span class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce mx-0.5" style="animation-delay: 150ms"></span>
+                        <span class="w-1.5 h-1.5 bg-klein rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                    </span>
+                </div>
+            `;
+            chatMessagesContainer.appendChild(wrapper);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        // 添加加载气泡
+        function appendLoadingBubble(bubbleId, tipText) {
+            appendStreamingBubble(bubbleId, tipText);
+        }
+
+        // 更新流式气泡内容
+        function updateStreamingBubble(bubbleId, text, isStreaming = false, imageUrls = []) {
+            const el = document.getElementById(bubbleId);
+            if (!el) return;
+
+            streamTextBuffer[bubbleId] = text;
+
+            // 构建图片网格
+            let imgGridHtml = '';
+            if (imageUrls && imageUrls.length > 0) {
+                imgGridHtml = '<div class="grid grid-cols-2 gap-2 mt-3">';
+                imageUrls.forEach(url => {
+                    imgGridHtml += `<img src="${url}" class="rounded-lg max-h-36 object-cover border border-slate-100 shadow-xs" onerror="this.style.display='none'"/>`;
+                });
+                imgGridHtml += '</div>';
+            }
+
+            // 打字机光标效果（仅流式输出时显示）
+            const cursorClass = isStreaming ? ' cursor-blink' : '';
+
+            el.innerHTML = `
+                <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                <div class="flex flex-col">
+                    <div class="ai-bubble${cursorClass}">
+                        ${text}
+                    </div>
+                    ${imgGridHtml}
+                </div>
+            `;
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        // 添加普通消息气泡
+        function appendMessageBubble(sender, text, imageUrls = []) {
+            const wrapper = document.createElement('div');
+
+            let imgGridHtml = '';
+            if (imageUrls && imageUrls.length > 0) {
+                imgGridHtml = '<div class="grid grid-cols-2 gap-2 mt-3">';
+                imageUrls.forEach(url => {
+                    imgGridHtml += `<img src="${url}" class="rounded-lg max-h-36 object-cover border border-slate-100 shadow-xs" onerror="this.style.display='none'"/>`;
+                });
+                imgGridHtml += '</div>';
+            }
+
+            if (sender === 'user') {
+                // 用户消息 - 紧凑样式，右对齐
+                wrapper.className = 'flex items-start space-x-2 justify-end';
+                wrapper.innerHTML = `
+                    <div class="user-bubble">
+                        ${text}
+                    </div>
+                    <div class="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-600 text-xs font-bold shrink-0">我</div>
+                `;
+            } else {
+                // AI消息 - 保持段落格式，左对齐
+                wrapper.className = 'flex items-start space-x-2';
+                wrapper.innerHTML = `
+                    <div class="w-7 h-7 rounded-lg bg-klein flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">AI</div>
+                    <div class="flex flex-col">
+                        <div class="ai-bubble">
+                            ${text}
+                        </div>
+                        ${imgGridHtml}
+                    </div>
+                `;
+            }
+
+            chatMessagesContainer.appendChild(wrapper);
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        // 页面加载完成
+        console.log('旅游智能问答智库系统已就绪');
+        console.log('导入服务地址:', IMPORT_URL);
+        console.log('查询服务地址:', QUERY_URL);
+        console.log('当前会话ID:', sessionId);
+    </script>
+</body>
+</html>

@@ -37,7 +37,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins = ['*'], # 198.1.1.1 , 192.168.1.1
     allow_methods = ['*'], # get post  put ...
-    allow_headers = ['*']  # content-type ...
+    allow_headers = ['*']  # content-type ... 
 )
 
 # 1. 返回chat对应的页面
@@ -45,7 +45,7 @@ app.add_middleware(
 @app.get("/html")
 def chat_html():
 
-    chat_html_path_obj = PROJECT_ROOT / "app" / "resources" / "html" / "index3.html"
+    chat_html_path_obj = PROJECT_ROOT / "app" / "resources" / "html" / "index4.html"
 
     return FileResponse(
         path = chat_html_path_obj,
